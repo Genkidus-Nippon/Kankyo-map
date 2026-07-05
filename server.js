@@ -43,7 +43,7 @@ function loadEnv(){
     } catch (e){ console.warn(".env 読み込み失敗:", p, e.message); }
   }
   if (!loadedFrom){
-    const hostEnv = process.env.GNEWS_KEY || process.env.SMTP_HOST || process.env.RENDER || process.env.PORT;
+    const hostEnv = process.env.CURRENT_KEY || process.env.SMTP_HOST || process.env.RENDER || process.env.PORT;
     if (hostEnv){
       console.log("（.envファイルなし。ホストの環境変数を使用します）");
     } else {
