@@ -1,5 +1,5 @@
 /* =========================================================
-   環境世界地図 — server.js（Express バックエンド）
+   環境世界地図 — server.js（Express バックエンド・修正強化版）
    - 静的ファイル配信（index.html / style.css / script.js）
    - POST /api/contact : 問い合わせ受信（保存＋任意でメール送信）
    - GET  /api/news    : ニュース取得（GNews→無ければGDELT）
@@ -15,7 +15,7 @@ function parseEnvFile(file){
   let count = 0;
   txt.split(/\r?\n/).forEach(line => {
     const m = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)$/);
-    if (!m) return;                          // 空行や # コメントは無視
+    if (!m) return;                                  // 空行や # コメントは無視
     const k = m[1];
     let v = m[2].trim().replace(/^["']|["']$/g, "");
     if (process.env[k] === undefined || process.env[k] === ""){ process.env[k] = v; count++; }
@@ -75,6 +75,7 @@ if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS){
       port: Number(process.env.SMTP_PORT) || 587,
       secure: Number(process.env.SMTP_PORT) === 465,
       auth: { user: process.env.SMTP_USER, pass },
+      connectionTimeout: 5000, // 長時間待機でサーバーが詰まるのを防ぐ（5秒）
     });
     // 認証を起動時に検証（失敗理由をすぐ表示）
     transporter.verify()
@@ -160,20 +161,38 @@ async function safeFetch(url, ms = 8000){
   } finally { clearTimeout(timer); }
 }
 
+// 検索ワードから空文字や"undefined"などのゴミを除くクリーンアップ関数
+function cleanQuery(...parts) {
+  return parts
+    .map(p => (p || "").toString().trim())
+    .filter(p => p && p !== "undefined" && p !== "null")
+    .join(" ");
+}
+
 async function fromGNews(ja, topic){
   if (!process.env.GNEWS_KEY) return [];
-  const q = encodeURIComponent(`${ja} ${topic}`.trim());
+  
+  const queryStr = cleanQuery(ja, topic);
+  if (!queryStr) return []; // 検索ワードが完全に空ならパス
+
+  const q = encodeURIComponent(queryStr);
   const url = `https://gnews.io/api/v4/search?q=${q}&lang=ja&max=6&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`;
-  const r = await safeFetch(url);
-  if (!r.ok){
-    const body = await r.text().catch(() => "");
-    console.warn("GNews失敗:", r.status, body.slice(0, 160));  // 403=キー不正, 429=上限
-    throw new Error("GNews " + r.status);
+  
+  try {
+    const r = await safeFetch(url);
+    if (!r.ok){
+      const body = await r.text().catch(() => "");
+      console.warn("GNews失敗:", r.status, body.slice(0, 160));  // 403=キー不正, 429=上限
+      return [];
+    }
+    const d = await r.json().catch(() => ({}));
+    return (d.articles || []).map(a => ({
+      title: a.title, url: a.url, source: (a.source && a.source.name) || "", date: a.publishedAt || ""
+    }));
+  } catch (e) {
+    console.warn("GNews取得中にエラー（タイムアウト等）:", e.message);
+    return [];
   }
-  const d = await r.json();
-  return (d.articles || []).map(a => ({
-    title: a.title, url: a.url, source: (a.source && a.source.name) || "", date: a.publishedAt || ""
-  }));
 }
 
 // --- GDELT: 429対策（直列化 + 最小間隔 + 1回リトライ）---
@@ -182,22 +201,31 @@ let lastGdelt = 0;
 const GDELT_MIN = 5000;   // 呼び出し間隔を最低5秒あける
 
 async function gdeltOnce(en, topic){
-  const q = `${en} ${topicToEn(topic)}`;
+  const enTopic = topicToEn(topic);
+  const queryStr = cleanQuery(en, enTopic);
+  if (!queryStr) return { articles:[] };
+
   const url = "https://api.gdeltproject.org/api/v2/doc/doc"
-            + `?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=6&sort=datedesc`;
-  const r = await safeFetch(url);
-  if (r.status === 429){ console.warn("GDELT 429（混雑）"); return { rate:true, articles:[] }; }
-  const text = await r.text();
-  if (!r.ok || !text.trim() || text.trim()[0] === "<"){
-    console.warn("GDELT失敗:", r.status, text.slice(0, 120));
+            + `?query=${encodeURIComponent(queryStr)}&mode=artlist&format=json&maxrecords=6&sort=datedesc`;
+  
+  try {
+    const r = await safeFetch(url);
+    if (r.status === 429){ console.warn("GDELT 429（混雑）"); return { rate:true, articles:[] }; }
+    const text = await r.text().catch(() => "");
+    if (!r.ok || !text.trim() || text.trim()[0] === "<"){
+      console.warn("GDELT失敗:", r.status, text.slice(0, 120));
+      return { articles:[] };
+    }
+    let d;
+    try { d = JSON.parse(text); }
+    catch { console.warn("GDELT非JSON:", text.slice(0, 120)); return { articles:[] }; }
+    return { articles:(d.articles || []).map(a => ({
+      title: a.title, url: a.url, source: a.domain || "", date: a.seendate || ""
+    })) };
+  } catch (e) {
+    console.warn("GDELT取得中にエラー（タイムアウト等）:", e.message);
     return { articles:[] };
   }
-  let d;
-  try { d = JSON.parse(text); }
-  catch { console.warn("GDELT非JSON:", text.slice(0, 120)); return { articles:[] }; }
-  return { articles:(d.articles || []).map(a => ({
-    title: a.title, url: a.url, source: a.domain || "", date: a.seendate || ""
-  })) };
 }
 
 function fromGDELT(en, topic){
@@ -214,27 +242,37 @@ function fromGDELT(en, topic){
     return res;
   });
   gdeltLock = run.catch(() => {});       // 失敗しても次の呼び出しは進める
-  return run;
+  return run.catch(() => ({ articles:[] })); // 呼び出し元にエラーを漏らさないように防御
 }
 
 app.get("/api/news", async (req, res) => {
-  const ja    = (req.query.country || "").toString();
-  const en    = (req.query.country_en || ja).toString();
-  const topic = (req.query.topic || "環境問題").toString();
-  const key = `${ja}|${en}|${topic}`;
+  try {
+    const ja    = (req.query.country || "").toString();
+    const en    = (req.query.country_en || ja).toString();
+    const topic = (req.query.topic || "環境問題").toString();
+    const key = `${ja}|${en}|${topic}`;
 
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.t < TTL) return res.json({ articles: hit.data, cached:true });
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.t < TTL) return res.json({ articles: hit.data, cached:true });
 
-  let articles = [], reason = "";
-  try { articles = await fromGNews(ja, topic); } catch (e){ console.warn(e.message); }
-  if (!articles.length){
-    const g = await fromGDELT(en, topic);
-    articles = g.articles || [];
-    if (!articles.length && g.rate) reason = "ratelimited";
+    let articles = [], reason = "";
+    
+    // 1. GNewsを試す
+    articles = await fromGNews(ja, topic);
+    
+    // 2. GNewsが全滅、または未設定ならGDELTを試す
+    if (!articles.length){
+      const g = await fromGDELT(en, topic);
+      articles = (g && g.articles) || [];
+      if (!articles.length && g && g.rate) reason = "ratelimited";
+    }
+    
+    if (articles.length) cache.set(key, { t: Date.now(), data: articles });
+    res.json({ articles, reason });
+  } catch (globalErr) {
+    console.error("APIルートで予期せぬエラー:", globalErr.message);
+    res.json({ articles: [], reason: "error" });
   }
-  if (articles.length) cache.set(key, { t: Date.now(), data: articles });
-  res.json({ articles, reason });
 });
 
 app.listen(PORT, () => {
