@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>環境世界地図</title>
+
+  <!-- Fonts: 見出しは明朝（桜の情緒）、UIはNoto Sans JP（可読性） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-view="home">
+
+  <!-- ========== 常設ヘッダー（右上ハンバーガー） ========== -->
+  <header class="topbar">
+    <button id="menuBtn" class="menu-btn" aria-label="メニューを開く" aria-expanded="false" aria-controls="navMenu">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <!-- スライドメニュー -->
+  <nav id="navMenu" class="nav-menu" aria-hidden="true">
+    <ul>
+      <li><button class="nav-link" data-go="home">HOME</button></li>
+      <li><button class="nav-link" data-go="about">環境世界地図とは</button></li>
+      <li><button class="nav-link" data-go="contact">問い合わせ</button></li>
+    </ul>
+    <p class="nav-foot">世界の「いま」を、地図から。</p>
+  </nav>
+  <div id="scrim" class="scrim" hidden></div>
+
+  <!-- ========== トップ画（桜／黒地） ========== -->
+  <section id="view-home" class="view view-home" aria-label="トップ">
+    <canvas id="sakura" class="sakura-canvas"></canvas>
+
+    <!-- 幹と枝のシルエット＋桜の花 -->
+    <svg class="branch" viewBox="0 0 400 300" preserveAspectRatio="xMinYMin slice" aria-hidden="true">
+      <path d="M -20 20 C 60 40, 90 70, 150 60 C 200 52, 230 80, 300 70"
+            fill="none" stroke="#3a2329" stroke-width="10" stroke-linecap="round"/>
+      <path d="M 150 60 C 170 40, 175 18, 168 -10" fill="none" stroke="#3a2329" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 230 74 C 250 60, 268 55, 300 30" fill="none" stroke="#3a2329" stroke-width="5" stroke-linecap="round"/>
+      <g class="blossoms" fill="#fbeef1">
+        <g transform="translate(168,-8)"><circle r="6"/><circle cx="9" cy="4" r="5"/><circle cx="-8" cy="5" r="5"/><circle cx="3" cy="-9" r="5" fill="#f6cad7"/></g>
+        <g transform="translate(300,30)"><circle r="6"/><circle cx="8" cy="6" r="5"/><circle cx="-9" cy="3" r="5" fill="#f6cad7"/><circle cx="0" cy="-9" r="5"/></g>
+        <g transform="translate(150,60)"><circle r="5"/><circle cx="8" cy="-3" r="4"/><circle cx="-7" cy="4" r="4" fill="#f6cad7"/></g>
+        <g transform="translate(300,70)"><circle r="5"/><circle cx="7" cy="5" r="4" fill="#f6cad7"/><circle cx="-8" cy="0" r="4"/></g>
+        <g transform="translate(60,38)"><circle r="4"/><circle cx="6" cy="4" r="3.5"/><circle cx="-6" cy="2" r="3.5" fill="#f6cad7"/></g>
+      </g>
+    </svg>
+
+    <!-- 中央右寄りのタイトル。押すと地図へ -->
+    <button id="enterBtn" class="hero-title" aria-label="環境世界地図をひらく">
+      <span class="hero-plate">
+        <span class="hero-main">環境世界地図</span>
+        <span class="hero-sub">Environmental World Map</span>
+        <span class="hero-cue">クリックして地図をひらく</span>
+      </span>
+    </button>
+  </section>
+
+  <!-- ========== 世界地図（青い海・緑の陸） ========== -->
+  <section id="view-map" class="view view-map" aria-label="世界地図" hidden>
+    <!-- テーマ検索欄 -->
+    <div class="map-search-bar">
+      <input type="text" id="topicSearch"
+             placeholder="気になるテーマ (例: 温暖化, 再生可能エネルギー)"
+             aria-label="テーマ検索" />
+    </div>
+
+    <div id="mapWrap" class="map-wrap">
+      <svg id="worldMap" class="world-map" aria-label="インタラクティブ世界地図"></svg>
+      <div id="mapLoading" class="map-loading">地図を読み込んでいます…</div>
+    </div>
+
+    <p class="map-hint">テーマを入力し、国をダブルクリックすると、その国の関連ニュースが開きます。</p>
+
+    <!-- ダブルクリックした国のそばに出る記事カード -->
+    <div id="cardLayer" class="card-layer"></div>
+  </section>
+
+  <!-- ========== 環境世界地図とは ========== -->
+  <section id="view-about" class="view view-about" aria-label="環境世界地図とは" hidden>
+    <div class="panel">
+      <p class="eyebrow">ABOUT</p>
+      <h1>環境世界地図とは</h1>
+      <p class="lead">世界地図の上から、環境のいまを受け取るツールです。</p>
+      <p>「環境問題は気になるけれど、どこから知ればいいか分からない」。その最初のひと目盛りを下げるために作りました。地球のどこで何が起きているのかを地図の上で直感的につかめるので、むずかしい統計を読み解く前に、まず世界の輪郭から関心を持てます。</p>
+      <div class="how">
+        <div class="how-item"><span class="how-n">01</span><div><h3>テーマを入れる</h3><p>検索欄に気になるテーマを入力します（空でも大丈夫です）。</p></div></div>
+        <div class="how-item"><span class="how-n">02</span><div><h3>国に触れる</h3><p>カーソルを合わせた国がふわりと浮かびあがります。</p></div></div>
+        <div class="how-item"><span class="how-n">03</span><div><h3>ダブルクリック</h3><p>その国×テーマの記事見出しが開き、クリックで本文へ直接飛べます。</p></div></div>
+      </div>
+      <button class="cta" data-go="map">地図をひらく</button>
+    </div>
+  </section>
+
+  <!-- ========== 問い合わせ ========== -->
+  <section id="view-contact" class="view view-contact" aria-label="問い合わせ" hidden>
+    <div class="panel">
+      <p class="eyebrow">CONTACT</p>
+      <h1>問い合わせ</h1>
+      <p class="lead">ご意見・掲載してほしい国や話題など、お気軽にどうぞ。</p>
+      <form id="contactForm" class="c-form" novalidate>
+        <label>お名前
+          <input type="text" name="name" required autocomplete="name" placeholder="山田 花子" />
+        </label>
+        <label>メールアドレス
+          <input type="email" name="email" required autocomplete="email" placeholder="you@example.com" />
+        </label>
+        <label>お問い合わせ内容
+          <textarea name="message" required rows="5" placeholder="ここに本文を入力してください"></textarea>
+        </label>
+        <button type="submit" class="cta">送信する</button>
+        <p id="formNote" class="form-note" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ライブラリは実行時（ブラウザ）にCDNから読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <script src="script.js"></script>
+</body>
+</html>

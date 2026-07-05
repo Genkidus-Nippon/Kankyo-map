@@ -1,0 +1,17 @@
+{
+  "name": "env-world-map",
+  "version": "1.0.0",
+  "private": true,
+  "description": "環境世界地図 — 世界地図から環境ニュースにアクセスするツール",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5",
+    "nodemailer": "^6.9.14"
+  }
+}
