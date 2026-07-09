@@ -74,11 +74,17 @@ process.on("uncaughtException", err => {
 const PORT = process.env.PORT || 3000;
 
 /* ---------- 任意: メール送信（SMTPが設定されていれば有効） ---------- */
+/* ---------- メール送信の準備 ----------
+   優先1: Resend（HTTPS/443。RenderなどSMTPポートが塞がれた環境向け）
+   優先2: SMTP（ローカルなどSMTPが使える環境向け）                */
 let transporter = null;
 let smtpVerified = false;
 let smtpLastError = null;
+const useResend = !!process.env.RESEND_KEY;
 
-if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS){
+if (useResend){
+  console.log("メール送信: Resend を使用（HTTPS送信のためポート制限を受けません）");
+} else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS){
   try {
     const nodemailer = require("nodemailer");
     const pass = process.env.SMTP_PASS;
@@ -102,8 +108,13 @@ if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS){
       .catch(err => {
         smtpLastError = err && err.message ? err.message : String(err);
         console.warn("⚠ メール送信の認証に失敗:", smtpLastError);
-        console.warn("  → SMTP_PASS は通常のパスワードではなく『アプリパスワード(16桁)』が必要です。");
-        console.warn("     Google Workspaceの場合、管理者がSMTP認証を禁止していると失敗します。");
+        if (/timeout|ETIMEDOUT|ECONNREFUSED/i.test(smtpLastError)){
+          console.warn("  → 接続自体ができていません。ホスト(Render等)がSMTPポートを塞いでいる可能性大です。");
+          console.warn("     対策: RESEND_KEY を設定してResend(HTTPS)で送るのが確実です。");
+        } else {
+          console.warn("  → SMTP_PASS は通常のパスワードではなく『アプリパスワード(16桁)』が必要です。");
+          console.warn("     Google Workspaceの場合、管理者がSMTP認証を禁止していると失敗します。");
+        }
       });
   } catch (e){
     smtpLastError = e.message;
@@ -133,27 +144,54 @@ app.post("/api/contact", async (req, res) => {
     fs.writeFileSync(file, JSON.stringify(list, null, 2));
   } catch (e){ console.error("保存に失敗:", e.message); }
 
-  // 2) メール送信（設定があれば）
+  // 2) メール送信（Resend優先 → SMTP）
   let mailed = false;
-  if (transporter){
+  const subject = `【環境世界地図】${name} 様からのお問い合わせ`;
+  const text = `お名前: ${name}\nメール: ${email}\n\n${message}`;
+  const to = process.env.MAIL_TO || process.env.SMTP_USER;
+
+  if (useResend){
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: process.env.MAIL_FROM || "onboarding@resend.dev",
+          to: [to], reply_to: email, subject, text,
+        }),
+      });
+      if (!r.ok){
+        const body = await r.text().catch(() => "");
+        smtpLastError = `Resend ${r.status}: ${body.slice(0,160)}`;
+        console.error("メール送信に失敗:", smtpLastError);
+        return res.status(500).json({ ok:false, error:"メール送信に失敗しました: " + smtpLastError + "（内容はサーバーに保存済みです）" });
+      }
+      mailed = true; smtpVerified = true; smtpLastError = null;
+      console.log("メール送信: 成功（Resend）→", to);
+    } catch (e){
+      smtpLastError = e.message;
+      console.error("メール送信に失敗:", e.message);
+      return res.status(500).json({ ok:false, error:"メール送信に失敗しました: " + e.message + "（内容はサーバーに保存済みです）" });
+    }
+  } else if (transporter){
     try {
       await transporter.sendMail({
         from: process.env.MAIL_FROM || process.env.SMTP_USER,
-        to:   process.env.MAIL_TO   || process.env.SMTP_USER,
-        replyTo: email,
-        subject: `【環境世界地図】${name} 様からのお問い合わせ`,
-        text: `お名前: ${name}\nメール: ${email}\n\n${message}`,
+        to, replyTo: email, subject, text,
       });
       mailed = true;
       smtpVerified = true; smtpLastError = null;
-      console.log("メール送信: 成功 →", process.env.MAIL_TO || process.env.SMTP_USER);
+      console.log("メール送信: 成功（SMTP）→", to);
     } catch (e){
       smtpLastError = e.message;
       console.error("メール送信に失敗:", e.message);
       return res.status(500).json({ ok:false, error:"メール送信に失敗しました: " + e.message + "（内容はサーバーに保存済みです）" });
     }
   } else {
-    console.warn("⚠ 問い合わせを受信しましたが、SMTP未設定のためメール送信していません（保存のみ）。");
+    console.warn("⚠ 問い合わせを受信しましたが、メール送信未設定のため配信していません（保存のみ）。");
   }
   res.json({ ok:true, mailed });
 });
@@ -327,14 +365,15 @@ app.get("/api/health", (_req, res) => res.json({
   fetch: typeof fetch !== "undefined",
   currents: !isPlaceholder(process.env.CURRENTS_KEY),
   mail: {
-    transporter: !!transporter,          // SMTP設定が読めてtransporterを作れたか
-    verified: smtpVerified,              // 認証テストに成功したか
-    host: process.env.SMTP_HOST || null,
-    port: process.env.SMTP_PORT || null,
+    mode: useResend ? "resend" : (transporter ? "smtp" : "none"),
+    transporter: useResend || !!transporter,
+    verified: useResend ? true : smtpVerified,
+    host: useResend ? "api.resend.com" : (process.env.SMTP_HOST || null),
+    port: useResend ? 443 : (process.env.SMTP_PORT || null),
     user_set: !isPlaceholder(process.env.SMTP_USER),
     pass_len: (process.env.SMTP_PASS || "").length,
     pass_has_space: /\s/.test(process.env.SMTP_PASS || ""),
     to_set: !isPlaceholder(process.env.MAIL_TO),
-    last_error: smtpLastError,           // 直近の送信/認証エラー
+    last_error: smtpLastError,
   }
 }));
