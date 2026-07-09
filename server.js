@@ -43,7 +43,7 @@ function loadEnv(){
     } catch (e){ console.warn(".env 読み込み失敗:", p, e.message); }
   }
   if (!loadedFrom){
-    const hostEnv = process.env.GNEWS_KEY || process.env.SMTP_HOST || process.env.RENDER || process.env.PORT;
+    const hostEnv = process.env.CURRENTS_KEY || process.env.SMTP_HOST || process.env.RENDER || process.env.PORT;
     if (hostEnv){
       console.log("（.envファイルなし。ホストの環境変数を使用します）");
     } else {
@@ -57,6 +57,19 @@ loadEnv();
 const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));   // このフォルダをそのまま公開
+
+// 万一どこかで拾い漏れた非同期エラーが出ても、落とさず警告だけにする
+process.on("unhandledRejection", err => {
+  const msg = (err && err.message) ? err.message : String(err);
+  if (err && err.name === "AbortError"){
+    console.warn("通信タイムアウト（処理は継続します）");   // 外部APIが遅いだけ
+  } else {
+    console.warn("未処理の非同期エラー:", msg);
+  }
+});
+process.on("uncaughtException", err => {
+  console.error("予期しないエラー:", err.message);
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -78,15 +91,19 @@ if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS){
       port: Number(process.env.SMTP_PORT) || 587,
       secure: Number(process.env.SMTP_PORT) === 465,
       auth: { user: process.env.SMTP_USER, pass },
+      connectionTimeout: 10000,   // 接続が固まらないように
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
-    // 認証を起動時に検証（失敗理由をすぐ表示）
-    transporter.verify()
+    // 認証を起動時に検証（失敗しても必ず握りつぶす）
+    Promise.resolve()
+      .then(() => transporter.verify())
       .then(() => { smtpVerified = true; console.log("メール送信: 有効（SMTP認証OK）"); })
       .catch(err => {
-        smtpLastError = err.message;
-        console.warn("⚠ メール送信の認証に失敗:", err.message);
+        smtpLastError = err && err.message ? err.message : String(err);
+        console.warn("⚠ メール送信の認証に失敗:", smtpLastError);
         console.warn("  → SMTP_PASS は通常のパスワードではなく『アプリパスワード(16桁)』が必要です。");
-        console.warn("     2段階認証を有効化 → https://myaccount.google.com/apppasswords で発行してください。");
+        console.warn("     Google Workspaceの場合、管理者がSMTP認証を禁止していると失敗します。");
       });
   } catch (e){
     smtpLastError = e.message;
@@ -238,18 +255,23 @@ async function gdeltOnce(en, topic){
 
 function fromGDELT(en, topic){
   const run = gdeltLock.then(async () => {
-    const wait = Math.max(0, GDELT_MIN - (Date.now() - lastGdelt));
-    if (wait) await sleep(wait);
-    lastGdelt = Date.now();
-    let res = await gdeltOnce(en, topic);
-    if (res.rate){                       // 429 → 6秒待って1回だけ再試行
-      await sleep(6000);
+    try {
+      const wait = Math.max(0, GDELT_MIN - (Date.now() - lastGdelt));
+      if (wait) await sleep(wait);
       lastGdelt = Date.now();
-      res = await gdeltOnce(en, topic);
+      let res = await gdeltOnce(en, topic);
+      if (res.rate){                       // 429 → 6秒待って1回だけ再試行
+        await sleep(6000);
+        lastGdelt = Date.now();
+        res = await gdeltOnce(en, topic);
+      }
+      return res;
+    } catch (e){
+      console.warn("GDELT処理エラー:", e.message);
+      return { articles: [] };             // 例外を外に出さない
     }
-    return res;
   });
-  gdeltLock = run.catch(() => {});       // 失敗しても次の呼び出しは進める
+  gdeltLock = run.then(() => {}, () => {}); // 次の呼び出しを必ず進める（拒否も握る）
   return run;
 }
 
