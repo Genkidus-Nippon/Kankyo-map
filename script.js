@@ -250,7 +250,10 @@ async function fetchNews(en, ja, topic){
       const d = await r.json();
       if (Array.isArray(d.articles) && d.articles.length) return d.articles;
       if (d.reason === "ratelimited"){
-        return [{ title:"アクセスが混み合っています。数十秒おいて再度お試しください。（安定させるには GNEWS_KEY の設定がおすすめです）", url:"#" }];
+        return [{ title:"アクセスが混み合っています。数十秒おいて再度お試しください。（安定させるには CURRENTS_KEY の設定がおすすめです）", url:"#" }];
+      }
+      if (d.reason === "error"){
+        return [{ title:"ニュース取得でエラーが発生しました。時間をおいて再度お試しください。", url:"#" }];
       }
       return [{ title:"このテーマの関連ニュースが見つかりませんでした。テーマを変えて試してください。", url:"#" }];
     }
@@ -415,7 +418,7 @@ form.addEventListener("submit", async e => {
       form.reset();
       note.textContent = out.mailed
         ? "お問い合わせを送信しました。ありがとうございます。"
-        : "お問い合わせを受け付けました。ありがとうございます。";
+        : "お問い合わせを受け付けました（サーバーに保存）。※メール送信は未設定のため配信されていません。";
     } else {
       note.classList.add("error");
       note.textContent = out.error || "送信に失敗しました。時間をおいて再度お試しください。";
