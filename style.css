@@ -250,3 +250,15 @@ body.menu-open .nav-menu{ transform:translateX(0); }
 .news-src{ display:block; margin-top:3px; font-size:.68rem; color:#8ea9b6; letter-spacing:.02em; }
 .news-dead{ display:block; padding:11px 2px; color:#9fb8c4; font-size:.9rem; }
 .card-loading{ padding:20px 16px; font-size:.9rem; color:#9fb8c4; }
+
+/* ---------- AIによる概況ブロック ---------- */
+.ai-overview{
+  margin:6px 14px 4px; padding:12px 14px;
+  background:rgba(127,199,141,.10); border:1px solid rgba(127,199,141,.28);
+  border-radius:10px;
+}
+.ai-tag{
+  display:inline-block; margin-bottom:6px; font-size:.66rem; font-weight:700;
+  letter-spacing:.04em; color:#8fd0a0;
+}
+.ai-overview p{ margin:0; font-size:.86rem; line-height:1.6; color:#e6efe9; }
