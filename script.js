@@ -242,30 +242,29 @@ function resetHover(){
 /* ③④ ニュース取得（バックエンド→無ければブラウザから直接）  */
 /* ========================================================= */
 async function fetchNews(en, ja, topic){
-  // 1) 自前バックエンド（APIキーを隠せる・CORS回避）
+  // 1) 自前バックエンド（信頼ソース絞り込み・日本語化・AI概況つき）
   try {
     const qs = new URLSearchParams({ country: ja, country_en: en, topic });
     const r = await fetch(`${NEWS_ENDPOINT}?${qs.toString()}`);
     if (r.ok){
       const d = await r.json();
-      if (Array.isArray(d.articles) && d.articles.length) return d.articles;
-      if (d.reason === "ratelimited"){
-        return [{ title:"アクセスが混み合っています。数十秒おいて再度お試しください。（安定させるには CURRENTS_KEY の設定がおすすめです）", url:"#" }];
+      let note = "";
+      if (!(d.articles && d.articles.length) && !d.overview){
+        note = d.reason === "error"
+          ? "ニュース取得でエラーが発生しました。時間をおいて再度お試しください。"
+          : "このテーマの関連ニュースが見つかりませんでした。テーマを変えて試してください。";
       }
-      if (d.reason === "error"){
-        return [{ title:"ニュース取得でエラーが発生しました。時間をおいて再度お試しください。", url:"#" }];
-      }
-      return [{ title:"このテーマの関連ニュースが見つかりませんでした。テーマを変えて試してください。", url:"#" }];
+      return { articles: d.articles || [], overview: d.overview || "", note };
     }
-    return [{ title:"ニュース取得に失敗しました。少し待ってから再度お試しください。", url:"#" }];
+    return { articles:[], overview:"", note:"ニュース取得に失敗しました。少し待ってから再度お試しください。" };
   } catch (_) {
     // サーバーに接続できない（index.htmlを直接開いた等）→ ブラウザから直接GDELT
     const arts = await fetchGdeltFromBrowser(en, topic);
     const failed = arts.length === 1 && arts[0].url === "#";
     if (failed){
-      return [{ title:"サーバーが起動していません。start（起動アイコン）を実行し、http://localhost:3000 を開いてください。", url:"#" }];
+      return { articles:[], overview:"", note:"サーバーが起動していません。start（起動アイコン）を実行し、http://localhost:3000 を開いてください。" };
     }
-    return arts;
+    return { articles: arts, overview:"", note:"" };
   }
 }
 
@@ -328,8 +327,18 @@ async function loadIntoCard(card, feature){
   card.innerHTML = headCard(ja, topic) + `<div class="card-loading">ニュースを検索しています…</div>`;
   card.querySelector(".card-close").addEventListener("click", () => closeCard(card._id));
 
-  const articles = await fetchNews(en, ja, topic);
-  card.innerHTML = headCard(ja, topic) + `<ul class="news-list">${renderArticles(articles)}</ul>`;
+  const { articles, overview, note } = await fetchNews(en, ja, topic);
+  let body = "";
+  if (overview){
+    body += `<div class="ai-overview"><span class="ai-tag">AIによる概況（参考情報）</span><p>${escapeHtml(overview)}</p></div>`;
+  }
+  if (articles.length){
+    body += `<ul class="news-list">${renderArticles(articles)}</ul>`;
+  }
+  if (note){
+    body += `<ul class="news-list"><li><span class="news-dead">${escapeHtml(note)}</span></li></ul>`;
+  }
+  card.innerHTML = headCard(ja, topic) + body;
   card.querySelector(".card-close").addEventListener("click", () => closeCard(card._id));
 }
 
