@@ -217,11 +217,15 @@ const TTL = 30 * 60 * 1000;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // タイムアウト付きfetch。中断・通信失敗でも例外を投げず、失敗扱いのオブジェクトを返す
-async function safeFetch(url, ms = 8000){
+async function safeFetch(url, ms = 12000, opts = {}){
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": "env-world-map/1.0" } });
+    return await fetch(url, {
+      ...opts,
+      signal: ctrl.signal,
+      headers: { "User-Agent": "env-world-map/1.0", ...(opts.headers || {}) },
+    });
   } catch (e){
     console.warn("fetch失敗:", e.name || e.message);
     return { ok:false, status:0, async text(){ return ""; }, async json(){ return {}; } };
@@ -265,14 +269,14 @@ async function fromCurrents(ja, en, topic){
 // --- GDELT: 429対策（直列化 + 最小間隔 + 1回リトライ）---
 let gdeltLock = Promise.resolve();
 let lastGdelt = 0;
-const GDELT_MIN = 5000;   // 呼び出し間隔を最低5秒あける
+const GDELT_MIN = 2000;   // 呼び出し間隔を最低2秒あける
 
 async function gdeltOnce(en, topic){
   try {
     const q = `${en} ${topicToEn(topic)}`;
     const url = "https://api.gdeltproject.org/api/v2/doc/doc"
-              + `?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=6&sort=datedesc`;
-    const r = await safeFetch(url);
+              + `?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=12&timespan=1m&sort=datedesc`;
+    const r = await safeFetch(url, 15000);   // GDELTは遅いので長めに待つ
     if (r.status === 429){ console.warn("GDELT 429（混雑）"); return { rate:true, articles:[] }; }
     const text = await r.text();
     if (!r.ok || !text.trim() || text.trim()[0] === "<"){
@@ -313,6 +317,92 @@ function fromGDELT(en, topic){
   return run;
 }
 
+/* ---------- ①信頼できる情報源のみに絞る ---------- */
+const TRUSTED = [
+  // 国際報道
+  "reuters.com","apnews.com","bbc.com","bbc.co.uk","theguardian.com","nytimes.com",
+  "washingtonpost.com","economist.com","aljazeera.com","cnn.com","bloomberg.com","ft.com",
+  "time.com","dw.com","france24.com","npr.org","scientificamerican.com",
+  // 科学・環境・公的機関
+  "nature.com","science.org","nationalgeographic.com","un.org","unep.org","who.int",
+  "worldbank.org","nasa.gov","noaa.gov","europa.eu","iea.org","ipcc.ch","climate.gov",
+  // 日本
+  "nhk.or.jp","www3.nhk.or.jp","asahi.com","yomiuri.co.jp","mainichi.jp","nikkei.com",
+  "jiji.com","kyodo.co.jp","nordot.app","env.go.jp","jma.go.jp","afpbb.com","cnn.co.jp",
+  "natgeo.nikkeibp.co.jp","natgeo.com","jetro.go.jp","unic.or.jp"
+];
+function isTrusted(url){
+  const h = domainOf(url);
+  return !!h && TRUSTED.some(d => h === d || h.endsWith("." + d));
+}
+
+// Currents / GDELT を集めて重複除去し、信頼ソースを優先
+async function gatherArticles(ja, en, topic){
+  let arts = await fromCurrents(ja, en, topic);
+  if (arts.length < 6){
+    const g = await fromGDELT(en, topic);
+    arts = arts.concat(g.articles || []);
+  }
+  const seen = new Set(), uniq = [];
+  for (const a of arts){
+    if (a.url && a.title && !seen.has(a.url)){ seen.add(a.url); uniq.push(a); }
+  }
+  const trusted = uniq.filter(a => isTrusted(a.url));
+  const rest    = uniq.filter(a => !isTrusted(a.url));
+  // 信頼ソースを先頭に。信頼ソースが十分あればそれだけ、少なければ他も添える
+  const ordered = trusted.length >= 4 ? trusted : trusted.concat(rest);
+  return ordered.slice(0, 8);
+}
+
+/* ---------- ②③ AI（Anthropic API）で翻訳・概況生成 ---------- */
+const ANTHROPIC = process.env.ANTHROPIC_API_KEY;
+const AI_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
+
+async function claudeText(system, user, maxTokens = 800){
+  if (!ANTHROPIC) return "";
+  const r = await safeFetch("https://api.anthropic.com/v1/messages", 20000, {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: AI_MODEL, max_tokens: maxTokens,
+      system, messages: [{ role: "user", content: user }],
+    }),
+  });
+  if (!r.ok){ console.warn("Anthropic失敗:", r.status, (await r.text()).slice(0,160)); return ""; }
+  const d = await r.json();
+  return (d.content || []).map(b => b.text || "").join("").trim();
+}
+
+// ③ 英語などの見出しを日本語へ翻訳（既に日本語ならそのまま）
+async function translateTitles(articles){
+  if (!ANTHROPIC || !articles.length) return articles;
+  const items = articles.map((a, i) => ({ i, t: a.title }));
+  const out = await claudeText(
+    "あなたは翻訳者です。ニュース見出しを自然な日本語に訳します。固有名詞は一般的な日本語表記にします。",
+    `次の各見出しを日本語にしてください。すでに日本語ならそのまま返します。出力はJSON配列のみで、各要素は {\"i\":番号,\"ja\":\"日本語見出し\"} の形式。前後の説明は一切書かないでください。\n\n${JSON.stringify(items, null, 0)}`,
+    1200
+  );
+  try {
+    const arr = JSON.parse(out.replace(/```json|```/g, "").trim());
+    const map = new Map(arr.map(o => [o.i, o.ja]));
+    return articles.map((a, i) => map.has(i) ? { ...a, title: map.get(i) } : a);
+  } catch { return articles; }  // 失敗時は原文のまま
+}
+
+// ② 記事が少ないときのAI概況（出典URLは作らない・AI生成と明示）
+async function aiOverview(ja, topic){
+  if (!ANTHROPIC) return "";
+  return await claudeText(
+    "あなたは環境問題の中立的な解説者です。事実に基づき、断定を避け、存在しない出典やURL・具体的な日付や統計の数字を創作しないでください。",
+    `${ja}における環境問題、特に「${topic}」に関する一般的な状況を、日本語で3〜4文にまとめてください。最新の個別ニュースの断定はせず、背景知識として概観を説明してください。`,
+    500
+  );
+}
+
 app.get("/api/news", async (req, res) => {
   const ja    = (req.query.country || "").toString();
   const en    = (req.query.country_en || ja).toString();
@@ -320,22 +410,24 @@ app.get("/api/news", async (req, res) => {
   const key = `${ja}|${en}|${topic}`;
 
   const hit = cache.get(key);
-  if (hit && Date.now() - hit.t < TTL) return res.json({ articles: hit.data, cached:true });
+  if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
 
-  let articles = [], reason = "";
+  let articles = [], overview = "", reason = "";
   try {
-    articles = await fromCurrents(ja, en, topic);   // メイン: Currents API
-    if (!articles.length){
-      const g = await fromGDELT(en, topic);         // 予備: キー不要のGDELT
-      articles = g.articles || [];
-      if (!articles.length && g.rate) reason = "ratelimited";
+    articles = await gatherArticles(ja, en, topic);      // ① 信頼ソース優先で収集
+    articles = await translateTitles(articles);          // ③ 見出しを日本語化
+    if (articles.length < 3){                            // ② 記事が少なければAI概況で補う
+      overview = await aiOverview(ja, topic);
     }
+    if (!articles.length && !overview) reason = "empty";
   } catch (e){
     console.warn("news取得エラー:", e.message);
-    reason = "error";                 // 何があっても500にしない
+    reason = "error";
   }
-  if (articles.length) cache.set(key, { t: Date.now(), data: articles });
-  res.json({ articles, reason });
+
+  const payload = { articles, overview, reason };
+  if (articles.length || overview) cache.set(key, { t: Date.now(), data: payload });
+  res.json(payload);
 });
 
 app.listen(PORT, () => {
@@ -355,6 +447,7 @@ app.listen(PORT, () => {
   } else {
     console.log("CURRENTS_KEY: 未設定（GDELTを使用）");
   }
+  console.log("AI補助（翻訳・概況）:", ANTHROPIC ? `有効（model=${AI_MODEL}）` : "無効（ANTHROPIC_API_KEY 未設定）");
 });
 
 // 起動確認用
