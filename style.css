@@ -262,3 +262,73 @@ body.menu-open .nav-menu{ transform:translateX(0); }
   letter-spacing:.04em; color:#8fd0a0;
 }
 .ai-overview p{ margin:0; font-size:.86rem; line-height:1.6; color:#e6efe9; }
+
+/* =========================================================
+   I-MAP 追加スタイル
+   ========================================================= */
+:root{ --nodata:#c3ccc8; }
+
+/* --- I-MAPトップのカード --- */
+.hero-wrap{ position:absolute; top:50%; left:58%; transform:translateY(-50%); }
+.hero-wrap .hero-plate{ display:block; padding:34px 46px; }
+.hero-wrap .hero-main{ font-size:clamp(2.8rem,7vw,5.4rem); letter-spacing:.2em; }
+.hero-lead{ margin:16px 0 22px; color:rgba(255,255,255,.72); font-size:.9rem; }
+.hero-cards{ display:flex; gap:12px; flex-wrap:wrap; }
+.hero-card{
+  display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+  min-width:130px; padding:14px 16px; cursor:pointer; text-align:left;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16);
+  border-radius:12px; color:#fff; transition:transform .2s, background .2s, border-color .2s;
+}
+.hero-card:hover{ transform:translateY(-4px); background:rgba(127,199,141,.16); border-color:var(--land-hi); }
+.hc-emoji{ font-size:1.5rem; }
+.hc-title{ font-family:var(--f-disp); font-weight:700; font-size:1.05rem; }
+.hc-desc{ font-size:.72rem; color:rgba(255,255,255,.6); }
+
+/* --- 地図の検索ボタン・モードタイトル --- */
+.map-search-bar{ display:flex; gap:8px; align-items:center; }
+.search-btn{
+  font-family:var(--f-body); font-size:.9rem; font-weight:700; cursor:pointer;
+  padding:11px 18px; border-radius:24px; border:1px solid rgba(255,255,255,.2);
+  background:var(--land); color:#08140c; transition:background .2s, transform .15s;
+}
+.search-btn:hover{ background:var(--land-hi); transform:translateY(-1px); }
+.map-mode-title{
+  position:absolute; top:72px; left:24px; z-index:6;
+  color:#eaf3f8; font-family:var(--f-disp); font-weight:700; font-size:1rem;
+  background:rgba(0,0,0,.30); padding:6px 12px; border-radius:8px; backdrop-filter:blur(4px);
+}
+.map-hint.flash{ background:rgba(90,164,107,.45); color:#fff; }
+
+/* --- 作物の凡例 --- */
+.crop-legend{
+  position:absolute; right:22px; bottom:18px; z-index:6; width:min(46vw,280px);
+  background:rgba(12,20,26,.9); border:1px solid rgba(255,255,255,.14);
+  border-radius:12px; padding:12px 14px; color:#eaf3f8; backdrop-filter:blur(6px);
+}
+.legend-title{ font-weight:700; font-size:.85rem; }
+.legend-bar{ height:12px; border-radius:6px; margin:8px 0 4px; }
+.legend-scale{ display:flex; justify-content:space-between; font-size:.72rem; color:#cfe0e8; }
+.legend-note{ display:block; margin-top:6px; font-size:.66rem; color:#9fb8c4; }
+
+/* --- 記事の説明文（歴史Wikipedia） --- */
+.news-desc{ display:block; margin-top:3px; font-size:.72rem; color:#b9cad3; line-height:1.4; }
+
+/* --- 作物詳細カード --- */
+.crop-detail{ padding:14px; }
+.crop-stat{ display:flex; align-items:baseline; gap:6px; }
+.cs-num{ font-family:var(--f-disp); font-weight:800; font-size:2.1rem; color:var(--land-hi); }
+.cs-unit{ font-size:.85rem; color:#cfe0e8; }
+.crop-rank{ margin:6px 0 0; font-size:.86rem; color:#eaf3f8; }
+.crop-none{ margin:0; font-size:.9rem; color:#9fb8c4; }
+.crop-src{ margin:12px 0 0; font-size:.68rem; color:#8ea9b6; }
+
+/* --- Aboutの複数CTA --- */
+.about-cta{ display:flex; gap:12px; flex-wrap:wrap; }
+.cta.ghost{ background:transparent; color:var(--land-hi); border:1px solid var(--land-hi); }
+.cta.ghost:hover{ background:rgba(127,199,141,.14); }
+
+@media (max-width:640px){
+  .hero-wrap{ left:50%; transform:translate(-50%,-50%); width:88vw; }
+  .crop-legend{ left:16px; right:16px; width:auto; }
+}
