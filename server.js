@@ -407,7 +407,7 @@ app.get("/api/news", async (req, res) => {
   const ja    = (req.query.country || "").toString();
   const en    = (req.query.country_en || ja).toString();
   const topic = (req.query.topic || "環境問題").toString();
-  const key = `${ja}|${en}|${topic}`;
+  const key = `news|${ja}|${en}|${topic}`;
 
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
@@ -416,18 +416,103 @@ app.get("/api/news", async (req, res) => {
   try {
     articles = await gatherArticles(ja, en, topic);      // ① 信頼ソース優先で収集
     articles = await translateTitles(articles);          // ③ 見出しを日本語化
-    if (articles.length < 3){                            // ② 記事が少なければAI概況で補う
-      overview = await aiOverview(ja, topic);
-    }
+    if (articles.length < 3) overview = await aiOverview(ja, topic);  // ② 少なければAI概況
     if (!articles.length && !overview) reason = "empty";
-  } catch (e){
-    console.warn("news取得エラー:", e.message);
-    reason = "error";
-  }
+  } catch (e){ console.warn("news取得エラー:", e.message); reason = "error"; }
 
   const payload = { articles, overview, reason };
   if (articles.length || overview) cache.set(key, { t: Date.now(), data: payload });
   res.json(payload);
+});
+
+/* ========================================================= */
+/* 歴史世界地図：日本語Wikipedia + 任意でAI概況                */
+/* ========================================================= */
+async function fromWikipedia(ja, topic){
+  const q = encodeURIComponent(`${ja} ${topic}`.trim());
+  const url = `https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch=${q}&srlimit=6&format=json`;
+  const r = await safeFetch(url);
+  if (!r.ok) return [];
+  const d = await r.json().catch(() => ({}));
+  const hits = (d.query && d.query.search) || [];
+  return hits.map(h => ({
+    title: h.title,
+    url: "https://ja.wikipedia.org/wiki/" + encodeURIComponent(h.title.replace(/ /g, "_")),
+    source: "Wikipedia",
+    desc: (h.snippet || "").replace(/<[^>]+>/g, "").replace(/&[a-z]+;/g, " ").trim(),
+  }));
+}
+async function aiHistoryOverview(ja, topic){
+  if (!ANTHROPIC) return "";
+  return await claudeText(
+    "あなたは歴史の中立的な解説者です。事実に基づき、年号や固有名詞は一般に知られた範囲で述べ、不確かな断定や出典・URLの創作はしないでください。",
+    `${ja}の歴史、特に「${topic}」に関わる出来事や背景を、日本語で3〜4文でわかりやすく説明してください。`,
+    500
+  );
+}
+app.get("/api/history", async (req, res) => {
+  const ja    = (req.query.country || "").toString();
+  const topic = (req.query.topic || "歴史").toString();
+  const key = `hist|${ja}|${topic}`;
+
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
+
+  let articles = [], overview = "", reason = "";
+  try {
+    articles = await fromWikipedia(ja, topic);
+    if (articles.length < 3) overview = await aiHistoryOverview(ja, topic);
+    if (!articles.length && !overview) reason = "empty";
+  } catch (e){ console.warn("history取得エラー:", e.message); reason = "error"; }
+
+  const payload = { articles, overview, reason };
+  if (articles.length || overview) cache.set(key, { t: Date.now(), data: payload });
+  res.json(payload);
+});
+
+/* ========================================================= */
+/* 作物世界地図：FAOベースのデータ + クリック時にAI補足        */
+/* ========================================================= */
+const { CROPS, resolveCrop, cropList } = require("./crops-data");
+
+app.get("/api/crops", (req, res) => {
+  const k = resolveCrop(req.query.crop);
+  if (!k){
+    return res.json({ ok:false, error:"未収録の作物です。", available: cropList() });
+  }
+  const c = CROPS[k];
+  const vals = Object.values(c.data);
+  res.json({
+    ok:true, crop:k, ja:c.ja, unit:c.unit, year:c.year, source:c.source,
+    data:c.data, max:Math.max(...vals), min:Math.min(...vals),
+  });
+});
+
+async function aiCropDetail(cropJa, countryJa){
+  if (!ANTHROPIC) return "";
+  return await claudeText(
+    "あなたは農業の解説者です。事実に基づき、主要な栽培品種や産地、特徴を簡潔に述べます。数量の断定や不確かな統計の創作はしないでください。",
+    `${countryJa}における「${cropJa}」の栽培について、主な産地・代表的な品種・特徴を日本語で2〜3文で説明してください。`,
+    400
+  );
+}
+app.get("/api/crop-detail", async (req, res) => {
+  const k = resolveCrop(req.query.crop);
+  const country   = (req.query.country || "").toString();     // 英語名（world-atlas）
+  const countryJa = (req.query.country_ja || country).toString();
+  if (!k) return res.json({ ok:false });
+  const c = CROPS[k];
+  const entries = Object.entries(c.data).sort((a, b) => b[1] - a[1]);
+  const idx = entries.findIndex(([n]) => n === country);
+  const production = idx >= 0 ? entries[idx][1] : null;
+  const rank = idx >= 0 ? idx + 1 : null;
+
+  let ai = "";
+  try { ai = await aiCropDetail(c.ja, countryJa); } catch (_) {}
+  res.json({
+    ok:true, ja:c.ja, unit:c.unit, year:c.year, source:c.source,
+    production, rank, producers: entries.length, ai,
+  });
 });
 
 app.listen(PORT, () => {
