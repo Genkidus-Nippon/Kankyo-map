@@ -263,7 +263,7 @@ async function fromCurrents(ja, en, topic){
   // 3) それでも0件なら英語（国 × テーマ英訳）
   if (!arts.length) arts = await currentsSearch(`${en} ${topicToEn(topic)}`, "en");
   if (!arts.length) console.warn(`Currents: 「${ja} ${topic}」該当なし → GDELTを試します`);
-  return arts.slice(0, 8);
+  return arts.slice(0, 12);
 }
 
 // --- GDELT: 429対策（直列化 + 最小間隔 + 1回リトライ）---
@@ -275,7 +275,7 @@ async function gdeltOnce(en, topic){
   try {
     const q = `${en} ${topicToEn(topic)}`;
     const url = "https://api.gdeltproject.org/api/v2/doc/doc"
-              + `?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=12&timespan=1m&sort=datedesc`;
+              + `?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=25&timespan=2m&sort=datedesc`;
     const r = await safeFetch(url, 15000);   // GDELTは遅いので長めに待つ
     if (r.status === 429){ console.warn("GDELT 429（混雑）"); return { rate:true, articles:[] }; }
     const text = await r.text();
@@ -349,9 +349,9 @@ async function gatherArticles(ja, en, topic){
   }
   const trusted = uniq.filter(a => isTrusted(a.url));
   const rest    = uniq.filter(a => !isTrusted(a.url));
-  // 信頼ソースを先頭に。信頼ソースが十分あればそれだけ、少なければ他も添える
-  const ordered = trusted.length >= 4 ? trusted : trusted.concat(rest);
-  return ordered.slice(0, 8);
+  // 信頼ソースを先頭に。多めに返して、クライアント側で「もっと見る」表示にする
+  const ordered = trusted.concat(rest);
+  return ordered.slice(0, 20);
 }
 
 /* ---------- ②③ AI（Anthropic API）で翻訳・概況生成 ---------- */
@@ -547,6 +547,42 @@ app.get("/api/theme-detail", async (req, res) => {
     } catch (_) {}
   }
   res.json({ ok:true, ja:t.ja, unit:t.unit, year:t.year, source:t.source, note:t.note, value, rank, producers:entries.length, ai });
+});
+
+/* ========================================================= */
+/* SDGs世界地図（17目標×指標・年代なし）                     */
+/* ========================================================= */
+const { getSdg, goalsMeta } = require("./sdg-data");
+
+app.get("/api/sdg/goals", (_req, res) => res.json({ ok:true, goals: goalsMeta() }));
+
+app.get("/api/sdg", (req, res) => {
+  const d = getSdg(req.query.goal, req.query.indicator);
+  if (!d) return res.json({ ok:false, error:"指標が見つかりません。" });
+  res.json(d);
+});
+
+app.get("/api/sdg-detail", async (req, res) => {
+  const d = getSdg(req.query.goal, req.query.indicator);
+  const country   = (req.query.country || "").toString();
+  const countryJa = (req.query.country_ja || country).toString();
+  if (!d) return res.json({ ok:false });
+  const entries = Object.entries(d.data).sort((a,b) => d.higherIsBetter ? b[1]-a[1] : a[1]-b[1]);
+  const idx = entries.findIndex(([n]) => n === country);
+  const value = idx>=0 ? entries[idx][1] : null;
+  const rank  = idx>=0 ? idx+1 : null;
+  let ai = "";
+  if (ANTHROPIC){
+    try {
+      ai = await claudeText(
+        "あなたは国際開発・SDGsの中立的な解説者です。事実に基づき、断定や統計数字の創作を避けてください。",
+        `${countryJa}における「SDG目標${d.goalId}：${d.goalTitle}」、特に「${d.label}」の状況を、日本語で2〜3文で概観してください。`,
+        400
+      );
+    } catch (_) {}
+  }
+  res.json({ ok:true, goalTitle:d.goalTitle, label:d.label, unit:d.unit, value, rank,
+             producers:entries.length, higherIsBetter:d.higherIsBetter, ai });
 });
 
 app.listen(PORT, () => {
