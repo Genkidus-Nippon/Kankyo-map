@@ -26,11 +26,13 @@
       <li><button class="nav-link" data-go="society">現社世界地図</button></li>
       <li><button class="nav-link" data-go="history">歴史世界地図</button></li>
       <li><button class="nav-link" data-go="crops">作物世界地図</button></li>
-      <li><button class="nav-link sub" data-go="warming">└ 温暖化世界地図</button></li>
-      <li><button class="nav-link sub" data-go="desert">└ 砂漠化世界地図</button></li>
-      <li><button class="nav-link sub" data-go="forest">└ 森林減少世界地図</button></li>
-      <li><button class="nav-link sub" data-go="water">└ 水不足世界地図</button></li>
-      <li><button class="nav-link sub" data-go="air">└ 大気汚染世界地図</button></li>
+      <li><button class="nav-link" data-go="sdg">SDGs世界地図</button></li>
+      <li><button class="nav-link" data-go="warming">温暖化世界地図</button></li>
+      <li><button class="nav-link" data-go="desert">砂漠化世界地図</button></li>
+      <li><button class="nav-link" data-go="forest">森林減少世界地図</button></li>
+      <li><button class="nav-link" data-go="water">水不足世界地図</button></li>
+      <li><button class="nav-link" data-go="air">大気汚染世界地図</button></li>
+      <li class="nav-div"></li>
       <li><button class="nav-link" data-go="about">I-MAPとは</button></li>
       <li><button class="nav-link" data-go="contact">問い合わせ</button></li>
     </ul>
@@ -42,14 +44,14 @@
   <section id="view-home" class="view view-home" aria-label="トップ">
     <canvas id="sakura" class="sakura-canvas"></canvas>
     <svg class="branch" viewBox="0 0 400 300" preserveAspectRatio="xMinYMin slice" aria-hidden="true">
-      <path d="M -20 20 C 60 40, 90 70, 150 60 C 200 52, 230 80, 300 70" fill="none" stroke="#3a2329" stroke-width="10" stroke-linecap="round"/>
-      <path d="M 150 60 C 170 40, 175 18, 168 -10" fill="none" stroke="#3a2329" stroke-width="5" stroke-linecap="round"/>
-      <path d="M 230 74 C 250 60, 268 55, 300 30" fill="none" stroke="#3a2329" stroke-width="5" stroke-linecap="round"/>
-      <g class="blossoms" fill="#fbeef1">
-        <g transform="translate(168,-8)"><circle r="6"/><circle cx="9" cy="4" r="5"/><circle cx="-8" cy="5" r="5"/><circle cx="3" cy="-9" r="5" fill="#f6cad7"/></g>
-        <g transform="translate(300,30)"><circle r="6"/><circle cx="8" cy="6" r="5"/><circle cx="-9" cy="3" r="5" fill="#f6cad7"/><circle cx="0" cy="-9" r="5"/></g>
-        <g transform="translate(150,60)"><circle r="5"/><circle cx="8" cy="-3" r="4"/><circle cx="-7" cy="4" r="4" fill="#f6cad7"/></g>
-        <g transform="translate(60,38)"><circle r="4"/><circle cx="6" cy="4" r="3.5"/><circle cx="-6" cy="2" r="3.5" fill="#f6cad7"/></g>
+      <path d="M -20 20 C 60 40, 90 70, 150 60 C 200 52, 230 80, 300 70" fill="none" stroke="#7a5560" stroke-width="10" stroke-linecap="round"/>
+      <path d="M 150 60 C 170 40, 175 18, 168 -10" fill="none" stroke="#7a5560" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 230 74 C 250 60, 268 55, 300 30" fill="none" stroke="#7a5560" stroke-width="5" stroke-linecap="round"/>
+      <g class="blossoms" fill="#f4a6c2">
+        <g transform="translate(168,-8)"><circle r="6"/><circle cx="9" cy="4" r="5"/><circle cx="-8" cy="5" r="5"/><circle cx="3" cy="-9" r="5" fill="#e87ea8"/></g>
+        <g transform="translate(300,30)"><circle r="6"/><circle cx="8" cy="6" r="5"/><circle cx="-9" cy="3" r="5" fill="#e87ea8"/><circle cx="0" cy="-9" r="5"/></g>
+        <g transform="translate(150,60)"><circle r="5"/><circle cx="8" cy="-3" r="4"/><circle cx="-7" cy="4" r="4" fill="#e87ea8"/></g>
+        <g transform="translate(60,38)"><circle r="4"/><circle cx="6" cy="4" r="3.5"/><circle cx="-6" cy="2" r="3.5" fill="#e87ea8"/></g>
       </g>
     </svg>
 
@@ -58,11 +60,17 @@
         <span class="hero-main">I-MAP</span>
         <span class="hero-sub">Information Maps of the World</span>
         <p class="hero-lead">世界の情報を、地図から。見たいテーマを選んでください。</p>
-        <div class="hero-cards">
-          <button class="hero-card" data-go="env"><span class="hc-emoji">🌏</span><span class="hc-title">環境世界地図</span><span class="hc-desc">各国の環境ニュース</span></button>
-          <button class="hero-card" data-go="society"><span class="hc-emoji">🌐</span><span class="hc-title">現社世界地図</span><span class="hc-desc">現代社会の課題</span></button>
-          <button class="hero-card" data-go="history"><span class="hc-emoji">📜</span><span class="hc-title">歴史世界地図</span><span class="hc-desc">各国の歴史情報</span></button>
-          <button class="hero-card" data-go="crops"><span class="hc-emoji">🌾</span><span class="hc-title">作物世界地図</span><span class="hc-desc">作物の収量を色で</span></button>
+        <div class="hero-grid">
+          <button class="hero-card" data-go="env"><span class="hc-emoji">🌏</span><span class="hc-title">環境</span></button>
+          <button class="hero-card" data-go="society"><span class="hc-emoji">🌐</span><span class="hc-title">現社</span></button>
+          <button class="hero-card" data-go="history"><span class="hc-emoji">📜</span><span class="hc-title">歴史</span></button>
+          <button class="hero-card" data-go="crops"><span class="hc-emoji">🌾</span><span class="hc-title">作物</span></button>
+          <button class="hero-card" data-go="sdg"><span class="hc-emoji">🎯</span><span class="hc-title">SDGs</span></button>
+          <button class="hero-card" data-go="warming"><span class="hc-emoji">☀️</span><span class="hc-title">温暖化</span></button>
+          <button class="hero-card" data-go="desert"><span class="hc-emoji">🏜️</span><span class="hc-title">砂漠化</span></button>
+          <button class="hero-card" data-go="forest"><span class="hc-emoji">🌲</span><span class="hc-title">森林減少</span></button>
+          <button class="hero-card" data-go="water"><span class="hc-emoji">💧</span><span class="hc-title">水不足</span></button>
+          <button class="hero-card" data-go="air"><span class="hc-emoji">🌫️</span><span class="hc-title">大気汚染</span></button>
         </div>
       </div>
     </div>
@@ -78,6 +86,8 @@
         <input type="range" id="decadeSlider" min="1950" max="2020" step="10" value="2020" aria-label="年代" />
         <span id="decadeLabel" class="decade-label">2020年</span>
       </div>
+      <select id="goalSelect" class="ctrl-select" aria-label="SDGs目標" hidden></select>
+      <select id="indicatorSelect" class="ctrl-select" aria-label="指標" hidden></select>
     </div>
     <div id="mapModeTitle" class="map-mode-title"></div>
     <div id="mapToast" class="map-toast" hidden></div>
