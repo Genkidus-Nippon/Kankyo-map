@@ -19,6 +19,8 @@ const MODES = {
              hint:"歴史のテーマを選んで表示、国をダブルクリックで関連情報が開きます。" },
   crops:   { title:"作物世界地図", type:"crops", endpoint:ENDPOINTS.crops,
              hint:"作物を選んで表示。収量で色が変わり、国をダブルクリックで詳細が出ます。" },
+  sdg:     { title:"SDGs世界地図", type:"sdg",
+             hint:"目標と指標を選ぶと、課題の大きい国が赤・良好な国が青で表示されます。国クリックで詳細。" },
   warming: { title:"温暖化世界地図", type:"theme", metric:"warming",
              hint:"年代スライダーを動かすと、気温上昇の分布が変わります。国クリックで詳細。" },
   desert:  { title:"砂漠化世界地図", type:"theme", metric:"desert",
@@ -30,7 +32,7 @@ const MODES = {
   air:     { title:"大気汚染世界地図", type:"theme", metric:"air",
              hint:"年代スライダーを動かすと、PM2.5の分布が変わります。国クリックで詳細。" },
 };
-const MAP_MODES = ["env","society","history","crops","warming","desert","forest","water","air"];
+const MAP_MODES = ["env","society","history","crops","sdg","warming","desert","forest","water","air"];
 
 /* 選択肢（テーマはこちらで提供。ここに追記すれば増やせます） */
 const THEMES = {
@@ -84,9 +86,11 @@ function applyMode(){
   mapSelect.value = currentMode;
   setControls(m.type);
   document.getElementById("mapHint").textContent = m.hint;
-  cropData = null; themeData = null;      // 遷移時に色分けをリセット
+  cropData=null; themeData=null; sdgData=null;      // 遷移時に色分けをリセット
   if (m.type === "theme"){
-    loadTheme(+decadeSlider.value);       // 現在の年代で色分け
+    loadTheme(+decadeSlider.value);
+  } else if (m.type === "sdg"){
+    initSdgControls();                               // 目標・指標プルダウンを構築して表示
   } else {
     if (m.type === "info" || m.type === "crops") populateThemeSelect();
     updateModeTitle();
@@ -94,11 +98,11 @@ function applyMode(){
   }
 }
 function setControls(type){
-  const showTheme  = (type === "info" || type === "crops");
-  const showDecade = (type === "theme");
-  themeSelect.hidden = !showTheme;
-  applyBtn.hidden = !showTheme;
-  decadeControl.hidden = !showDecade;
+  themeSelect.hidden   = !(type==="info" || type==="crops");
+  applyBtn.hidden      = !(type==="info" || type==="crops");
+  decadeControl.hidden = (type!=="theme");
+  goalSelect.hidden     = (type!=="sdg");
+  indicatorSelect.hidden= (type!=="sdg");
 }
 function populateThemeSelect(){
   const opts = (currentMode==="crops") ? CROP_OPTIONS : THEMES[currentMode];
@@ -109,6 +113,8 @@ function updateModeTitle(){
   const el = document.getElementById("mapModeTitle"), m = MODES[currentMode];
   if (currentMode==="crops" && cropData){
     el.textContent = `${m.title}：${cropData.ja}（${cropData.year}年・出典 ${cropData.source}）`;
+  } else if (currentMode==="sdg" && sdgData){
+    el.textContent = `目標${sdgData.goalId}：${sdgData.goalTitle} ／ ${sdgData.label}`;
   } else if (m.type==="theme" && themeData){
     el.textContent = `${m.title}：${themeData.year}年（${themeData.unit}・${themeData.source}）`;
   } else {
@@ -133,7 +139,7 @@ const canvas=document.getElementById("sakura"), ctx=canvas.getContext("2d");
 let petals=[], sakuraRAF=null, sakuraOn=false;
 function sizeCanvas(){ const d=window.devicePixelRatio||1; canvas.width=innerWidth*d; canvas.height=innerHeight*d; ctx.setTransform(d,0,0,d,0,0); }
 function makePetal(){ return {x:Math.random()*innerWidth,y:Math.random()*-innerHeight,r:6+Math.random()*8,sp:0.6+Math.random()*1.4,sway:Math.random()*Math.PI*2,swaySp:0.01+Math.random()*0.03,rot:Math.random()*Math.PI,rotSp:(Math.random()-0.5)*0.04,op:0.5+Math.random()*0.5}; }
-function drawPetal(p){ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=p.op; const g=ctx.createLinearGradient(-p.r,0,p.r,0); g.addColorStop(0,"#fbeef1"); g.addColorStop(1,"#f5cdd8"); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-p.r); ctx.quadraticCurveTo(p.r*0.9,-p.r*0.2,0,p.r); ctx.quadraticCurveTo(-p.r*0.9,-p.r*0.2,0,-p.r); ctx.fill(); ctx.restore(); }
+function drawPetal(p){ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=p.op; const g=ctx.createLinearGradient(-p.r,0,p.r,0); g.addColorStop(0,"#f9c3d6"); g.addColorStop(1,"#f08bb0"); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-p.r); ctx.quadraticCurveTo(p.r*0.9,-p.r*0.2,0,p.r); ctx.quadraticCurveTo(-p.r*0.9,-p.r*0.2,0,-p.r); ctx.fill(); ctx.restore(); }
 function tick(){ ctx.clearRect(0,0,innerWidth,innerHeight); for(const p of petals){ p.sway+=p.swaySp; p.x+=Math.sin(p.sway)*0.8; p.y+=p.sp; p.rot+=p.rotSp; if(p.y-p.r>innerHeight){ Object.assign(p,makePetal(),{y:-10}); } drawPetal(p); } sakuraRAF=requestAnimationFrame(tick); }
 function startSakura(){ if(sakuraOn) return; sakuraOn=true; sizeCanvas(); const n=Math.min(120,Math.round(innerWidth/13)); petals=Array.from({length:n},makePetal); tick(); }
 function stopSakura(){ sakuraOn=false; if(sakuraRAF) cancelAnimationFrame(sakuraRAF); }
@@ -146,8 +152,10 @@ const svg=d3.select("#worldMap"), loading=document.getElementById("mapLoading");
 let gRoot,path,projection,geo,countrySel;
 let cropData=null;     // 作物モードのデータ
 let themeData=null;    // 特化型モードのデータ
+let sdgData=null;      // SDGsモードのデータ
 function activeChoro(){
   if (currentMode==="crops") return cropData;
+  if (currentMode==="sdg") return sdgData;
   if (MODES[currentMode].type==="theme") return themeData;
   return null;
 }
@@ -191,8 +199,12 @@ function recolorMap(){
   if(!countrySel) return;
   const dd = activeChoro();
   if(dd){
-    const max = dd.max || 1;
-    countrySel.style("fill", d=>{ const v=dd.data[d.properties.name]; return v==null?"var(--nodata)":colorForValue(v,max); });
+    if(dd.scoreData){                          // SDGs: 良好=青, 課題大=赤（0..1のスコア）
+      countrySel.style("fill", d=>{ const s=dd.scoreData[d.properties.name]; return s==null?"var(--nodata)":cropColor(s); });
+    } else {
+      const max = dd.colorMax || dd.max || 1;   // 特化型は固定スケール
+      countrySel.style("fill", d=>{ const v=dd.data[d.properties.name]; return v==null?"var(--nodata)":colorForValue(v,max); });
+    }
     showLegend();
   }else{
     countrySel.style("fill",null); hideLegend();
@@ -210,6 +222,7 @@ function onCountryDblClick(feature){
   const type = MODES[currentMode].type;
   if (type==="crops") openCropCard(feature);
   else if (type==="theme") openThemeCard(feature);
+  else if (type==="sdg") openSdgCard(feature);
   else openInfoCard(feature);
 }
 
@@ -242,13 +255,23 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<
 function closeAllCards(){ openCards.forEach(({card})=>card.remove()); openCards.clear(); }
 
 function headCard(titleJa,sub){ return `<div class="card-head"><div><h2>${escapeHtml(titleJa)}</h2><span class="sample-tag">${escapeHtml(sub)}</span></div><button class="card-close" aria-label="閉じる">×</button></div>`; }
-function renderArticles(articles){
-  return articles.map(a=>{
+function renderArticles(articles, visible=8){
+  return articles.map((a,i)=>{
+    const hid = i>=visible ? " hidden" : "";
     const src=a.source?`<span class="news-src">${escapeHtml(a.source)}</span>`:"";
     const desc=a.desc?`<span class="news-desc">${escapeHtml(a.desc).slice(0,90)}…</span>`:"";
-    if(!a.url||a.url==="#") return `<li><span class="news-dead">${escapeHtml(a.title)}</span></li>`;
-    return `<li><a href="${encodeURI(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.title)}${desc}${src}</a></li>`;
+    if(!a.url||a.url==="#") return `<li${hid}><span class="news-dead">${escapeHtml(a.title)}</span></li>`;
+    return `<li${hid}><a href="${encodeURI(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.title)}${desc}${src}</a></li>`;
   }).join("");
+}
+function bindMore(card){
+  const btn=card.querySelector("[data-more]");
+  if(!btn) return;
+  btn.addEventListener("click", ()=>{
+    card.querySelectorAll(".news-list li[hidden]").forEach(li=>li.removeAttribute("hidden"));
+    btn.remove();
+    requestAnimationFrame(()=>{ const e=openCards.get(card._id); if(e) positionCard(card,e.feature); });
+  });
 }
 async function fetchInfo(en,ja,topic){
   const ep=MODES[currentMode].endpoint;
@@ -271,10 +294,13 @@ async function loadInfoCard(card,feature){
   const {articles,overview,note}=await fetchInfo(en,ja,topic);
   let body="";
   if(overview) body+=`<div class="ai-overview"><span class="ai-tag">${currentMode==="history"?"AIによる歴史概説":"AIによる概況"}（参考情報）</span><p>${escapeHtml(overview)}</p></div>`;
-  if(articles.length) body+=`<ul class="news-list">${renderArticles(articles)}</ul>`;
+  if(articles.length){
+    body+=`<ul class="news-list">${renderArticles(articles)}</ul>`;
+    if(articles.length>8) body+=`<button class="more-btn" data-more>もっと見る（残り${articles.length-8}件）</button>`;
+  }
   if(note) body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(note)}</span></li></ul>`;
   card.innerHTML=headCard(ja,sub)+body;
-  bindClose(card);
+  bindClose(card); bindMore(card);
   requestAnimationFrame(()=>positionCard(card,feature));  // 内容確定後に位置を再計算（画面外防止）
 }
 function bindClose(card){ card.querySelector(".card-close").addEventListener("click",()=>closeCard(card._id)); }
@@ -379,6 +405,61 @@ const pulseEl=document.getElementById("mapPulse");
 const decadeControl=document.getElementById("decadeControl");
 const decadeSlider=document.getElementById("decadeSlider");
 const decadeLabel=document.getElementById("decadeLabel");
+const goalSelect=document.getElementById("goalSelect");
+const indicatorSelect=document.getElementById("indicatorSelect");
+let sdgGoals=null;   // 目標メタ（一度だけ取得）
+
+async function initSdgControls(){
+  if(!sdgGoals){
+    try{ const r=await fetch("/api/sdg/goals"); const d=await r.json(); sdgGoals=d.goals||[]; }
+    catch(_){ flashHint("SDGsデータの取得に失敗しました。サーバー起動を確認してください。"); return; }
+  }
+  goalSelect.innerHTML=sdgGoals.map(g=>`<option value="${g.id}">${g.id}. ${g.title}</option>`).join("");
+  goalSelect.selectedIndex=0;
+  populateIndicatorSelect();
+  loadSdg();
+}
+function populateIndicatorSelect(){
+  const g=sdgGoals.find(x=>String(x.id)===goalSelect.value)||sdgGoals[0];
+  indicatorSelect.innerHTML=g.indicators.map(i=>`<option value="${i.key}">${i.label}</option>`).join("");
+  indicatorSelect.selectedIndex=0;
+  indicatorSelect.hidden = (g.indicators.length<=1) ? false : false; // 常に表示（1つでも見せる）
+}
+async function loadSdg(){
+  playPulse(); closeAllCards();
+  try{
+    const r=await fetch(`/api/sdg?goal=${goalSelect.value}&indicator=${indicatorSelect.value}`);
+    const d=await r.json();
+    if(!d.ok){ flashHint("指標データが見つかりませんでした。"); return; }
+    sdgData=d; recolorMap(); updateModeTitle();
+    showToast(`目標${d.goalId}「${d.label}」で表示中`);
+  }catch(_){ flashHint("サーバーに接続できません。"); }
+}
+goalSelect.addEventListener("change", ()=>{ populateIndicatorSelect(); loadSdg(); });
+indicatorSelect.addEventListener("change", loadSdg);
+
+async function openSdgCard(feature){
+  if(!sdgData){ flashHint("目標と指標を選んでください。"); return; }
+  closeAllCards();
+  const en=feature.properties.name, ja=jaName(en), id="sdg_"+(feature.id||en.replace(/\W/g,""));
+  const card=document.createElement("div"); card.className="info-card"; card._id=id;
+  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"sdg"});
+  positionCard(card,feature); card.style.zIndex="40";
+  const sub=`目標${sdgData.goalId} / ${sdgData.label}`;
+  card.innerHTML=headCard(ja,sub)+`<div class="card-loading">詳細を取得しています…</div>`; bindClose(card);
+  let detail={};
+  try{ const qs=new URLSearchParams({goal:sdgData.goalId,indicator:sdgData.key,country:en,country_ja:ja}); const r=await fetch(`/api/sdg-detail?${qs.toString()}`); if(r.ok) detail=await r.json(); }catch(_){}
+  const val=(detail.value!=null)?detail.value:sdgData.data[en];
+  let body=`<div class="crop-detail">`;
+  if(val!=null){
+    body+=`<div class="crop-stat"><span class="cs-num">${fmt(val)}</span><span class="cs-unit">${escapeHtml(sdgData.unit)}</span></div>`;
+    if(detail.rank) body+=`<p class="crop-rank">${sdgData.higherIsBetter?"良い順":"課題が小さい順"}で 第${detail.rank}位 / ${detail.producers}か国中</p>`;
+  }else body+=`<p class="crop-none">この指標の収録データにこの国は含まれていません。</p>`;
+  if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
+  body+=`<p class="crop-src">${escapeHtml(sdgData.goalTitle)}／出典: ${escapeHtml(sdgData.source)}</p></div>`;
+  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
+  requestAnimationFrame(()=>positionCard(card,feature));
+}
 
 // 地図選択プルダウンを一度だけ構築
 mapSelect.innerHTML=MAP_MODES.map(m=>`<option value="${m}">${MODES[m].title}</option>`).join("");
