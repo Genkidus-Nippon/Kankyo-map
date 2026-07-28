@@ -515,6 +515,40 @@ app.get("/api/crop-detail", async (req, res) => {
   });
 });
 
+/* ========================================================= */
+/* 特化型・年代別マップ（温暖化/砂漠化/森林/水/大気）          */
+/* ========================================================= */
+const { getTheme } = require("./theme-data");
+
+app.get("/api/theme", (req, res) => {
+  const t = getTheme(req.query.metric, req.query.decade);
+  if (!t) return res.json({ ok:false, error:"未対応の指標です。" });
+  res.json(t);
+});
+
+app.get("/api/theme-detail", async (req, res) => {
+  const t = getTheme(req.query.metric, req.query.decade);
+  const country   = (req.query.country || "").toString();
+  const countryJa = (req.query.country_ja || country).toString();
+  if (!t) return res.json({ ok:false });
+  const entries = Object.entries(t.data).sort((a, b) => b[1] - a[1]);
+  const idx = entries.findIndex(([n]) => n === country);
+  const value = idx >= 0 ? entries[idx][1] : null;
+  const rank  = idx >= 0 ? idx + 1 : null;
+
+  let ai = "";
+  if (ANTHROPIC){
+    try {
+      ai = await claudeText(
+        "あなたは環境問題の中立的な解説者です。事実に基づき、断定や統計数字の創作を避けてください。",
+        `${countryJa}における「${t.ja}」の一般的な状況や背景を、日本語で2〜3文で説明してください。`,
+        400
+      );
+    } catch (_) {}
+  }
+  res.json({ ok:true, ja:t.ja, unit:t.unit, year:t.year, source:t.source, note:t.note, value, rank, producers:entries.length, ai });
+});
+
 app.listen(PORT, () => {
   console.log("========================================");
   console.log(`  環境世界地図が起動しました`);
