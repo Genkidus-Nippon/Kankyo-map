@@ -332,3 +332,63 @@ body.menu-open .nav-menu{ transform:translateX(0); }
   .hero-wrap{ left:50%; transform:translate(-50%,-50%); width:88vw; }
   .crop-legend{ left:16px; right:16px; width:auto; }
 }
+
+/* =========================================================
+   I-MAP 追加2: 選択UI・モーション・トースト
+   ========================================================= */
+.map-controls{ position:absolute; top:24px; left:24px; z-index:10; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ctrl-select{
+  font-family:var(--f-body); font-size:.9rem; color:#fff; cursor:pointer;
+  padding:10px 34px 10px 14px; border-radius:24px;
+  border:1px solid rgba(255,255,255,.2); background:rgba(12,20,26,.9);
+  backdrop-filter:blur(6px); appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='white' stroke-width='1.6' fill='none'/></svg>");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+.ctrl-select:focus{ outline:none; border-color:var(--land-hi); }
+.ctrl-select option{ color:#111; }
+
+.map-mode-title{ top:78px; }
+
+/* テーマ確定モーション（波紋） */
+.map-pulse{ position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
+.map-pulse::after{
+  content:""; width:40px; height:40px; border-radius:50%;
+  border:3px solid var(--land-hi); opacity:0; transform:scale(0.2);
+}
+.map-pulse.go::after{ animation:pulseRing .7s ease-out; }
+@keyframes pulseRing{
+  0%{ opacity:.7; transform:scale(0.2); }
+  70%{ opacity:.25; }
+  100%{ opacity:0; transform:scale(22); }
+}
+
+/* トースト（確定フィードバック） */
+.map-toast{
+  position:absolute; top:130px; left:50%; transform:translateX(-50%) translateY(-8px);
+  z-index:11; background:rgba(90,164,107,.95); color:#08140c; font-weight:700;
+  font-size:.9rem; padding:10px 20px; border-radius:24px; box-shadow:0 8px 24px rgba(0,0,0,.35);
+  opacity:0; transition:opacity .3s, transform .3s;
+}
+.map-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+@media (max-width:640px){
+  .map-controls{ top:16px; left:16px; right:16px; }
+  .ctrl-select{ flex:1; }
+}
+
+/* =========================================================
+   I-MAP 追加3: 年代スライダー・サブメニュー
+   ========================================================= */
+.decade-control{ display:flex; align-items:center; gap:10px;
+  background:rgba(12,20,26,.9); border:1px solid rgba(255,255,255,.2);
+  border-radius:24px; padding:8px 16px; backdrop-filter:blur(6px); }
+.decade-control input[type="range"]{ width:150px; accent-color:var(--land-hi); cursor:pointer; }
+.decade-label{ color:#fff; font-weight:700; font-size:.9rem; min-width:56px; text-align:right; }
+
+.nav-link.sub{ font-size:1.05rem; font-weight:500; color:rgba(247,223,230,.82); padding-left:10px; }
+.nav-link.sub:hover{ padding-left:20px; }
+
+@media (max-width:640px){
+  .decade-control input[type="range"]{ width:110px; }
+}
