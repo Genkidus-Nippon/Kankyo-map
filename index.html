@@ -23,8 +23,14 @@
     <ul>
       <li><button class="nav-link" data-go="home">HOME</button></li>
       <li><button class="nav-link" data-go="env">環境世界地図</button></li>
+      <li><button class="nav-link" data-go="society">現社世界地図</button></li>
       <li><button class="nav-link" data-go="history">歴史世界地図</button></li>
       <li><button class="nav-link" data-go="crops">作物世界地図</button></li>
+      <li><button class="nav-link sub" data-go="warming">└ 温暖化世界地図</button></li>
+      <li><button class="nav-link sub" data-go="desert">└ 砂漠化世界地図</button></li>
+      <li><button class="nav-link sub" data-go="forest">└ 森林減少世界地図</button></li>
+      <li><button class="nav-link sub" data-go="water">└ 水不足世界地図</button></li>
+      <li><button class="nav-link sub" data-go="air">└ 大気汚染世界地図</button></li>
       <li><button class="nav-link" data-go="about">I-MAPとは</button></li>
       <li><button class="nav-link" data-go="contact">問い合わせ</button></li>
     </ul>
@@ -54,6 +60,7 @@
         <p class="hero-lead">世界の情報を、地図から。見たいテーマを選んでください。</p>
         <div class="hero-cards">
           <button class="hero-card" data-go="env"><span class="hc-emoji">🌏</span><span class="hc-title">環境世界地図</span><span class="hc-desc">各国の環境ニュース</span></button>
+          <button class="hero-card" data-go="society"><span class="hc-emoji">🌐</span><span class="hc-title">現社世界地図</span><span class="hc-desc">現代社会の課題</span></button>
           <button class="hero-card" data-go="history"><span class="hc-emoji">📜</span><span class="hc-title">歴史世界地図</span><span class="hc-desc">各国の歴史情報</span></button>
           <button class="hero-card" data-go="crops"><span class="hc-emoji">🌾</span><span class="hc-title">作物世界地図</span><span class="hc-desc">作物の収量を色で</span></button>
         </div>
@@ -63,14 +70,21 @@
 
   <!-- ========== 世界地図（3モード共通） ========== -->
   <section id="view-map" class="view view-map" aria-label="世界地図" hidden>
-    <div class="map-search-bar">
-      <input type="text" id="topicSearch" placeholder="検索" aria-label="検索" />
-      <button id="searchBtn" class="search-btn" aria-label="検索">検索</button>
+    <div class="map-controls">
+      <select id="mapSelect" class="ctrl-select" aria-label="地図を選ぶ"></select>
+      <select id="themeSelect" class="ctrl-select" aria-label="テーマを選ぶ"></select>
+      <button id="applyBtn" class="search-btn">表示</button>
+      <div id="decadeControl" class="decade-control" hidden>
+        <input type="range" id="decadeSlider" min="1950" max="2020" step="10" value="2020" aria-label="年代" />
+        <span id="decadeLabel" class="decade-label">2020年</span>
+      </div>
     </div>
     <div id="mapModeTitle" class="map-mode-title"></div>
+    <div id="mapToast" class="map-toast" hidden></div>
 
     <div id="mapWrap" class="map-wrap">
       <svg id="worldMap" class="world-map" aria-label="インタラクティブ世界地図"></svg>
+      <div id="mapPulse" class="map-pulse" aria-hidden="true"></div>
       <div id="mapLoading" class="map-loading">地図を読み込んでいます…</div>
     </div>
 
