@@ -1,91 +1,111 @@
 /* =========================================================
    SDGs世界地図 用データ（代表値モデル・現状把握用／年代なし）
-   ※厳密な最新統計ではなく、傾向を示す代表値です。
-   国名は world-atlas の英語名に合わせています。
+   ※厳密な最新統計ではなく傾向を示す代表値です。50か国を収録。
+   国名は world-atlas の英語名に準拠。
    ========================================================= */
 
-// 共通の国リスト（各指標の値は同じ並びの配列）
 const C = [
-  "United States of America","China","India","Japan","Germany","United Kingdom","France",
-  "Brazil","Russia","Canada","Australia","South Korea","Mexico","Indonesia","Nigeria",
-  "Ethiopia","South Africa","Egypt","Saudi Arabia","Turkey","Pakistan","Bangladesh",
-  "Vietnam","Argentina",
+  "United States of America","China","India","Japan","Germany","United Kingdom","France","Brazil","Russia","Canada",
+  "Australia","South Korea","Mexico","Indonesia","Nigeria","Ethiopia","South Africa","Egypt","Saudi Arabia","Turkey",
+  "Pakistan","Bangladesh","Vietnam","Argentina","Spain","Italy","Poland","Ukraine","Sweden","Kenya",
+  "Morocco","Iran","Colombia","Thailand","Philippines","Kazakhstan","Democratic Republic of the Congo","Afghanistan","Peru","Chile",
+  "Netherlands","Norway","Ghana","Tanzania","Iraq","Malaysia","Myanmar","Sudan","Angola","Uganda",
 ];
 function zip(vals){ const o={}; C.forEach((c,i)=>{ if(vals[i]!=null) o[c]=vals[i]; }); return o; }
 
-// higherIsBetter=true は「高い＝良い」。色は常に 赤=課題大 / 青=良好。
 const GOALS = [
   { id:1, title:"貧困をなくそう", color:"#e5243b", indicators:[
-    { key:"poverty", label:"極度の貧困率", unit:"%", higherIsBetter:false,
-      data:zip([1,1,10,1,1,1,1,5,1,1,1,1,3,3,30,27,18,3,1,1,4,10,2,4]) },
+    { key:"poverty", label:"極度の貧困率", unit:"%", higherIsBetter:false, data:zip([
+      1,1,10,1,1,1,1,5,1,1, 1,1,3,3,30,27,18,3,1,1, 4,10,2,4,1,1,1,2,1,29,
+      1,2,4,0.1,5,0.1,77,55,3,1, 1,1,11,49,2,0.1,2,15,32,41]) },
   ]},
   { id:2, title:"飢餓をゼロに", color:"#dda63a", indicators:[
-    { key:"undernourish", label:"栄養不足人口の割合", unit:"%", higherIsBetter:false,
-      data:zip([2.5,2.5,16,2.5,2.5,2.5,2.5,4,2.5,2.5,2.5,2.5,7,6,15,25,7,5,3,2.5,16,12,6,3]) },
+    { key:"undernourish", label:"栄養不足人口の割合", unit:"%", higherIsBetter:false, data:zip([
+      2.5,2.5,16,2.5,2.5,2.5,2.5,4,2.5,2.5, 2.5,2.5,7,6,15,25,7,5,3,2.5, 16,12,6,3,2.5,2.5,2.5,2.5,2.5,25,
+      5,5,8,8,7,3,40,30,7,3, 2.5,2.5,5,23,20,2.5,5,13,20,30]) },
   ]},
   { id:3, title:"すべての人に健康と福祉を", color:"#4c9f38", indicators:[
-    { key:"life", label:"平均寿命", unit:"歳", higherIsBetter:true,
-      data:zip([77,78,70,84,81,81,82,75,71,82,83,84,75,68,53,65,64,70,77,78,66,72,74,77]) },
-    { key:"infant", label:"乳児死亡率", unit:"‰", higherIsBetter:false,
-      data:zip([5,6,27,2,3,4,3,13,4,4,3,2,12,20,72,36,27,17,6,9,55,24,16,9]) },
+    { key:"life", label:"平均寿命", unit:"歳", higherIsBetter:true, data:zip([
+      77,78,70,84,81,81,82,75,71,82, 83,84,75,68,53,65,64,70,77,78, 66,72,74,77,83,83,78,71,83,66,
+      74,74,77,77,71,73,60,62,77,80, 82,83,64,66,71,76,67,65,60,63]) },
+    { key:"infant", label:"乳児死亡率", unit:"‰", higherIsBetter:false, data:zip([
+      5,6,27,2,3,4,3,13,4,4, 3,2,12,20,72,36,27,17,6,9, 55,24,16,9,3,3,4,7,2,31,
+      17,12,11,7,22,9,66,45,11,6, 3,2,33,35,21,7,35,42,50,31]) },
   ]},
   { id:4, title:"質の高い教育をみんなに", color:"#c5192d", indicators:[
-    { key:"literacy", label:"識字率", unit:"%", higherIsBetter:true,
-      data:zip([99,97,74,99,99,99,99,93,99,99,99,98,95,96,62,52,95,71,97,96,58,75,95,99]) },
+    { key:"literacy", label:"識字率", unit:"%", higherIsBetter:true, data:zip([
+      99,97,74,99,99,99,99,93,99,99, 99,98,95,96,62,52,95,71,97,96, 58,75,95,99,98,99,99,99,99,82,
+      74,86,95,94,96,99,80,43,94,97, 99,99,79,78,86,95,89,61,71,77]) },
   ]},
   { id:5, title:"ジェンダー平等を実現しよう", color:"#ff3a21", indicators:[
-    { key:"gender", label:"ジェンダーギャップ指数", unit:"(0-1)", higherIsBetter:true,
-      data:zip([0.75,0.68,0.64,0.65,0.81,0.79,0.79,0.73,0.71,0.77,0.78,0.68,0.76,0.70,0.64,0.71,0.78,0.63,0.64,0.64,0.57,0.72,0.71,0.76]) },
+    { key:"gender", label:"ジェンダーギャップ指数", unit:"(0-1)", higherIsBetter:true, data:zip([
+      0.75,0.68,0.64,0.65,0.81,0.79,0.79,0.73,0.71,0.77, 0.78,0.68,0.76,0.70,0.64,0.71,0.78,0.63,0.64,0.64,
+      0.57,0.72,0.71,0.76,0.79,0.71,0.72,0.71,0.82,0.73, 0.62,0.58,0.75,0.71,0.78,0.71,0.68,0.55,0.75,0.78,
+      0.81,0.85,0.73,0.72,0.60,0.68,0.76,0.58,0.67,0.72]) },
   ]},
   { id:6, title:"安全な水とトイレを世界中に", color:"#26bde2", indicators:[
-    { key:"water", label:"安全な水へのアクセス率", unit:"%", higherIsBetter:true,
-      data:zip([99,90,90,99,100,100,100,88,96,99,100,98,90,60,30,13,82,94,100,95,36,59,76,90]) },
+    { key:"water", label:"安全な水へのアクセス率", unit:"%", higherIsBetter:true, data:zip([
+      99,90,90,99,100,100,100,88,96,99, 100,98,90,60,30,13,82,94,100,95, 36,59,76,90,100,100,99,94,100,32,
+      80,94,73,76,55,95,20,30,50,99, 100,100,41,61,60,82,60,60,56,50]) },
   ]},
   { id:7, title:"エネルギーをみんなに そしてクリーンに", color:"#fcc30b", indicators:[
-    { key:"electricity", label:"電力アクセス率", unit:"%", higherIsBetter:true,
-      data:zip([100,100,99,100,100,100,100,100,100,100,100,100,100,97,55,48,85,100,100,100,73,92,99,100]) },
-    { key:"renew", label:"発電に占める再エネ比率", unit:"%", higherIsBetter:true,
-      data:zip([21,30,22,22,44,43,25,83,20,68,32,8,24,19,22,100,12,12,0.5,42,30,2,40,30]) },
+    { key:"electricity", label:"電力アクセス率", unit:"%", higherIsBetter:true, data:zip([
+      100,100,99,100,100,100,100,100,100,100, 100,100,100,97,55,48,85,100,100,100, 73,92,99,100,100,100,100,100,100,71,
+      100,100,100,100,96,100,19,98,96,100, 100,100,86,40,100,100,70,54,47,42]) },
+    { key:"renew", label:"発電に占める再エネ比率", unit:"%", higherIsBetter:true, data:zip([
+      21,30,22,22,44,43,25,83,20,68, 32,8,24,19,22,100,12,12,0.5,42, 30,2,40,30,45,40,17,8,68,90,
+      20,7,75,15,22,12,99,85,60,50, 20,98,40,50,3,19,50,60,60,60]) },
   ]},
   { id:8, title:"働きがいも経済成長も", color:"#a21942", indicators:[
-    { key:"unemp", label:"失業率", unit:"%", higherIsBetter:false,
-      data:zip([4,5,7,3,3,4,7,9,4,5,4,3,3,5,9,3,33,7,5,10,6,5,2,7]) },
+    { key:"unemp", label:"失業率", unit:"%", higherIsBetter:false, data:zip([
+      4,5,7,3,3,4,7,9,4,5, 4,3,3,5,9,3,33,7,5,10, 6,5,2,7,13,8,3,9,7,6,
+      12,9,10,1,5,5,5,12,7,8, 4,4,4,3,16,4,1,17,8,3]) },
   ]},
   { id:9, title:"産業と技術革新の基盤をつくろう", color:"#fd6925", indicators:[
-    { key:"rnd", label:"研究開発費(対GDP)", unit:"%", higherIsBetter:true,
-      data:zip([3.5,2.4,0.7,3.3,3.1,2.9,2.2,1.2,1.0,1.7,1.8,4.9,0.3,0.3,0.2,0.3,0.8,0.9,0.5,1.4,0.2,0.3,0.4,0.5]) },
+    { key:"rnd", label:"研究開発費(対GDP)", unit:"%", higherIsBetter:true, data:zip([
+      3.5,2.4,0.7,3.3,3.1,2.9,2.2,1.2,1.0,1.7, 1.8,4.9,0.3,0.3,0.2,0.3,0.8,0.9,0.5,1.4,
+      0.2,0.3,0.4,0.5,1.4,1.5,1.4,0.4,3.4,0.8, 0.7,0.8,0.3,1.3,0.2,0.1,0.1,0.1,0.2,0.4,
+      2.3,2.3,0.4,0.5,0.1,1.0,0.3,0.2,0.03,0.2]) },
   ]},
   { id:10, title:"人や国の不平等をなくそう", color:"#dd1367", indicators:[
-    { key:"gini", label:"ジニ係数", unit:"(0-100)", higherIsBetter:false,
-      data:zip([41,38,35,33,32,35,32,53,36,33,34,31,45,38,35,35,63,32,46,42,30,32,36,42]) },
+    { key:"gini", label:"ジニ係数", unit:"(0-100)", higherIsBetter:false, data:zip([
+      41,38,35,33,32,35,32,53,36,33, 34,31,45,38,35,35,63,32,46,42, 30,32,36,42,35,36,30,26,29,40,
+      40,42,52,35,42,29,42,37,44,44, 29,27,44,40,30,41,31,34,51,43]) },
   ]},
   { id:11, title:"住み続けられるまちづくりを", color:"#fd9d24", indicators:[
-    { key:"pm25", label:"都市のPM2.5濃度", unit:"µg/m³", higherIsBetter:false,
-      data:zip([9,40,55,11,11,10,12,14,16,8,8,24,22,35,45,35,25,50,45,28,60,65,30,13]) },
+    { key:"pm25", label:"都市のPM2.5濃度", unit:"µg/m³", higherIsBetter:false, data:zip([
+      9,40,55,11,11,10,12,14,16,8, 8,24,22,35,45,35,25,50,45,28, 60,65,30,13,11,16,20,18,6,22,
+      40,38,17,26,20,24,40,55,25,20, 11,7,38,30,50,20,32,55,40,40]) },
   ]},
   { id:12, title:"つくる責任 つかう責任", color:"#bf8b2e", indicators:[
-    { key:"co2pc", label:"一人当たりCO2排出", unit:"t", higherIsBetter:false,
-      data:zip([14,8,2,8,8,5,4.5,2.2,11,15,15,12,3.7,2.3,0.6,0.15,7,2.3,18,5,1,0.6,3.5,4]) },
+    { key:"co2pc", label:"一人当たりCO2排出", unit:"t", higherIsBetter:false, data:zip([
+      14,8,2,8,8,5,4.5,2.2,11,15, 15,12,3.7,2.3,0.6,0.15,7,2.3,18,5, 1,0.6,3.5,4,5,5,8,4,3.5,0.35,
+      1.8,8,1.8,3.8,1.3,14,0.03,0.3,1.7,4.7, 8,7,0.6,0.2,4,8,0.6,0.4,0.8,0.13]) },
   ]},
   { id:13, title:"気候変動に具体的な対策を", color:"#3f7e44", indicators:[
-    { key:"co2total", label:"CO2排出量(世界シェア)", unit:"%", higherIsBetter:false,
-      data:zip([13,31,7,3,2,1,1,1.3,4,1.5,1.2,1.7,1.4,1.7,0.2,0.05,1.2,0.7,1.8,1.1,0.7,0.3,0.9,0.5]) },
+    { key:"co2total", label:"CO2排出量(世界シェア)", unit:"%", higherIsBetter:false, data:zip([
+      13,31,7,3,2,1,1,1.3,4,1.5, 1.2,1.7,1.4,1.7,0.2,0.05,1.2,0.7,1.8,1.1, 0.7,0.3,0.9,0.5,0.7,0.9,0.9,0.5,0.1,0.05,
+      0.2,2,0.2,0.8,0.4,0.7,0.03,0.03,0.1,0.2, 0.3,0.1,0.05,0.03,0.5,0.7,0.08,0.05,0.06,0.02]) },
   ]},
   { id:14, title:"海の豊かさを守ろう", color:"#0a97d9", indicators:[
-    { key:"marine", label:"海洋保護区の割合", unit:"%", higherIsBetter:true,
-      data:zip([26,5,0.5,8,45,38,45,27,3,14,45,2,22,3,0.5,null,15,5,3,4,0.9,5,0.5,8]) },
+    { key:"marine", label:"海洋保護区の割合", unit:"%", higherIsBetter:true, data:zip([
+      26,5,0.5,8,45,38,45,27,3,14, 45,2,22,3,0.5,null,15,5,3,4, 0.9,5,0.5,8,12,20,15,3,16,1,
+      3,1,15,2,5,0.1,0.5,null,10,45, 45,45,1,3,0.5,3,2,0.5,0,null]) },
   ]},
   { id:15, title:"陸の豊かさも守ろう", color:"#56c02b", indicators:[
-    { key:"forest", label:"森林被覆率", unit:"%", higherIsBetter:true,
-      data:zip([34,23,24,69,33,13,31,59,50,39,17,64,34,49,24,15,14,0.1,0.5,29,5,11,47,10]) },
+    { key:"forest", label:"森林被覆率", unit:"%", higherIsBetter:true, data:zip([
+      34,23,24,69,33,13,31,59,50,39, 17,64,34,49,24,15,14,0.1,0.5,29, 5,11,47,10,37,32,31,17,69,6,
+      13,7,53,39,24,1.2,56,2,58,24, 11,33,35,52,2,58,45,10,47,12]) },
   ]},
   { id:16, title:"平和と公正をすべての人に", color:"#00689d", indicators:[
-    { key:"homicide", label:"殺人発生率", unit:"人/10万", higherIsBetter:false,
-      data:zip([6,0.5,3,0.3,1,1,1.2,22,7,2,0.9,0.6,28,0.4,22,7,36,1.5,1.5,2.5,4,2.5,1.5,5]) },
+    { key:"homicide", label:"殺人発生率", unit:"人/10万", higherIsBetter:false, data:zip([
+      6,0.5,3,0.3,1,1,1.2,22,7,2, 0.9,0.6,28,0.4,22,7,36,1.5,1.5,2.5, 4,2.5,1.5,5,0.7,0.5,0.7,6,1,5,
+      1.5,2,26,3,6,7,13,7,8,4, 0.6,0.5,2,7,10,2,2,7,5,12]) },
   ]},
   { id:17, title:"パートナーシップで目標を達成しよう", color:"#19486a", indicators:[
-    { key:"internet", label:"インターネット普及率", unit:"%", higherIsBetter:true,
-      data:zip([92,76,46,90,93,96,86,81,88,93,96,98,72,62,55,25,72,72,100,83,36,39,79,88]) },
+    { key:"internet", label:"インターネット普及率", unit:"%", higherIsBetter:true, data:zip([
+      92,76,46,90,93,96,86,81,88,93, 96,98,72,62,55,25,72,72,100,83, 36,39,79,88,94,84,85,80,96,42,
+      88,84,73,88,53,91,23,18,71,90, 92,99,68,25,80,97,44,31,40,29]) },
   ]},
 ];
 
@@ -96,19 +116,16 @@ function indicator(goalId, key){
   const g = goalById(goalId); if (!g) return null;
   return g.indicators.find(i => i.key === key) || g.indicators[0];
 }
-
-// 課題スコア（0=良好 → 1=課題大）を国ごとに算出（色分け用）
 function buildScore(ind){
   const vals = Object.values(ind.data);
   const min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
   const score = {};
   for (const [c, v] of Object.entries(ind.data)){
-    const t = (v - min) / span;                 // 0..1（値の大小）
-    score[c] = ind.higherIsBetter ? (1 - t) : t; // 高い=良い なら反転
+    const t = (v - min) / span;
+    score[c] = ind.higherIsBetter ? (1 - t) : t;
   }
   return { score, min, max };
 }
-
 function getSdg(goalId, key){
   const g = goalById(goalId); if (!g) return null;
   const ind = indicator(goalId, key); if (!ind) return null;
@@ -117,13 +134,12 @@ function getSdg(goalId, key){
     ok:true, goalId:g.id, goalTitle:g.title, color:g.color,
     key:ind.key, label:ind.label, unit:ind.unit, higherIsBetter:ind.higherIsBetter,
     data:ind.data, scoreData:score, min, max, source:SOURCE,
-    lowLabel:"良好", highLabel:"課題大",
+    lowLabel:"良好", highLabel:"課題大", count:Object.keys(ind.data).length,
   };
 }
-
 function goalsMeta(){
   return GOALS.map(g => ({ id:g.id, title:g.title, color:g.color,
     indicators:g.indicators.map(i => ({ key:i.key, label:i.label })) }));
 }
 
-module.exports = { GOALS, getSdg, goalsMeta };
+module.exports = { GOALS, getSdg, goalsMeta, COUNTRIES:C };
