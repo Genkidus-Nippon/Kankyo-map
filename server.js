@@ -562,6 +562,25 @@ app.get("/api/sdg", (req, res) => {
   res.json(d);
 });
 
+/* ========================================================= */
+/* ユーザー世界地図（利用者の声・手動反映）                    */
+/* ========================================================= */
+app.get("/api/user", (_req, res) => {
+  let voices = {};
+  try { delete require.cache[require.resolve("./user-data")]; voices = require("./user-data") || {}; }
+  catch (e){ console.warn("user-data 読み込み失敗:", e.message); }
+  const data = {}; let max = 0;
+  for (const [c, arr] of Object.entries(voices)){
+    const n = Array.isArray(arr) ? arr.length : 0;
+    data[c] = n; if (n > max) max = n;
+  }
+  res.json({
+    ok:true, data, messages:voices, colorMax:Math.max(max,1),
+    unit:"件", label:"利用者の声", source:"問い合わせ（手動反映）",
+    lowLabel:"少ない", highLabel:"多い",
+  });
+});
+
 app.get("/api/sdg-detail", async (req, res) => {
   const d = getSdg(req.query.goal, req.query.indicator);
   const country   = (req.query.country || "").toString();
