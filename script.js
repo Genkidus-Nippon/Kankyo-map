@@ -25,14 +25,19 @@ const MODES = {
 const MAP_MODES = ["imap","env","crops","sdg","user"];
 const HOME_MAPS = ["imap","env","crops","sdg"];   // HOMEに並べる4つ
 
-const ENV_METRICS = { "温暖化":"warming","砂漠化":"desert","森林減少":"forest","水不足":"water","大気汚染":"air" };
+const ENV_METRICS = { "温暖化":"warming","砂漠化":"desert","森林減少":"forest","水不足":"water","大気汚染":"air","CO2排出":"co2","海面上昇":"sea","生物多様性の損失":"biodiv" };
 let currentMetric = null;
 
 /* 選択肢（テーマはこちらで提供） */
 const THEMES = {
-  imap: ["温暖化","気候変動","森林破壊","大気汚染","海洋プラスチック","生物多様性","水資源","再生可能エネルギー",
-         "貧困","難民・移民","紛争・戦争","ジェンダー平等","教育","感染症","食料危機","経済格差","人権","災害","人口問題"],
-  env:  ["温暖化","砂漠化","森林減少","水不足","大気汚染"],   // env はメトリクスを選ぶ
+  env:  ["温暖化","砂漠化","森林減少","水不足","大気汚染","CO2排出","海面上昇","生物多様性の損失"],
+};
+/* I-Map: 大分類 → 小テーマ */
+const IMAP_CATEGORIES = {
+  "環境": ["温暖化","気候変動","森林破壊","大気汚染","海洋プラスチック","生物多様性","水資源","再生可能エネルギー","干ばつ","山火事"],
+  "歴史": ["革命","独立","産業革命","戦争","植民地","冷戦","移民","古代文明","宗教改革","王朝"],
+  "文化": ["ダンス","音楽","料理","映画","祭り","建築","文学","スポーツ","ファッション","宗教"],
+  "社会": ["貧困","難民・移民","紛争","ジェンダー平等","教育","感染症","食料危機","経済格差","人権","人口問題"],
 };
 const CROP_OPTIONS = ["米","小麦","とうもろこし","大豆","コーヒー","じゃがいも"];
 
@@ -97,19 +102,33 @@ function applyMode(){
   }
 }
 function setControls(type){
+  const infoish = (type==="info");
   themeSelect.hidden   = !(type==="info" || type==="crops" || type==="envdata");
-  applyBtn.hidden      = !(type==="info" || type==="crops" || type==="envdata");
+  subSelect.hidden     = !infoish;                 // I-Mapの小テーマ
+  applyBtn.hidden      = !(type==="crops" || type==="envdata" || type==="info");
   freeSearch.hidden    = !(type==="info" || type==="envdata");
   decadeControl.hidden = (type!=="envdata");
   goalSelect.hidden     = (type!=="sdg");
   indicatorSelect.hidden= (type!=="sdg");
 }
 function populateThemeSelect(){
+  if (currentMode==="imap"){                         // I-Map: 大分類を選ぶ
+    const cats = Object.keys(IMAP_CATEGORIES);
+    themeSelect.innerHTML = `<option value="" disabled selected>分野を選ぼう</option>`
+      + cats.map(c => `<option value="${c}">${c}</option>`).join("");
+    subSelect.innerHTML = `<option value="" disabled selected>テーマを選ぼう</option>`;
+    return;
+  }
   const isCrop = (currentMode==="crops");
   const opts = isCrop ? CROP_OPTIONS : THEMES[currentMode];
   const ph = isCrop ? "作物を選ぼう" : (currentMode==="env" ? "テーマを選ぼう（温暖化など）" : "テーマを設定しよう");
   themeSelect.innerHTML = `<option value="" disabled selected>${ph}</option>`
     + opts.map(o => `<option value="${o}">${o}</option>`).join("");
+}
+function populateSubSelect(cat){
+  const subs = IMAP_CATEGORIES[cat] || [];
+  subSelect.innerHTML = `<option value="" disabled selected>テーマを選ぼう</option>`
+    + subs.map(o => `<option value="${o}">${o}</option>`).join("");
 }
 function updateModeTitle(){
   const el = document.getElementById("mapModeTitle"), m = MODES[currentMode];
@@ -154,6 +173,7 @@ addEventListener("resize", ()=>{ if(sakuraOn) sizeCanvas(); });
 /* ========================================================= */
 const svg=d3.select("#worldMap"), loading=document.getElementById("mapLoading");
 let gRoot,path,projection,geo,countrySel;
+let zoomBehavior=null, currentTransform=d3.zoomIdentity;
 let cropData=null;     // 作物モードのデータ
 let themeData=null;    // 特化型モードのデータ
 let sdgData=null;      // SDGsモードのデータ
@@ -181,6 +201,12 @@ async function initMap(){
       .attr("class","country").on("mouseenter",onEnter).on("mouseleave",onLeave)
       .on("dblclick",(e,d)=>{ e.preventDefault(); onCountryDblClick(d); });
     svg.on("mouseleave",resetHover);
+
+    // ズーム/パン（モバイルで小さい国もタップしやすく）。ダブルクリックはカード用に温存
+    zoomBehavior = d3.zoom().scaleExtent([1, 12])
+      .on("zoom", (e)=>{ currentTransform=e.transform; gRoot.attr("transform", e.transform); repositionCards(); });
+    svg.call(zoomBehavior).on("dblclick.zoom", null);
+
     fitMap(); loading.hidden=true;
     addEventListener("resize", ()=>{ fitMap(); repositionCards(); });
   }catch(err){ loading.textContent="地図データを読み込めませんでした。インターネット接続をご確認ください。"; console.error(err); }
@@ -265,6 +291,7 @@ const CARD_W=300, GAP=14;
 function currentTopic(){
   const free=(freeSearch.value||"").trim();
   if(free) return free;
+  if(currentMode==="imap") return (subSelect.value||"").trim();
   return (themeSelect.value||"").trim();
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
@@ -428,14 +455,20 @@ async function loadTheme(metric, decade){
   }catch(_){ flashHint("サーバーに接続できません。npm start で起動してください。"); }
 }
 
-/* 画面外に出さない位置決め（内容の高さを測って上下左右をクランプ） */
+/* 画面外・操作パネルに重ならない位置決め（ズーム変換も考慮） */
 function positionCard(card,feature){
   const b=path.bounds(feature);
+  // ズーム/パン変換を反映した画面座標に変換
+  const tl=currentTransform.apply(b[0]);
+  const br=currentTransform.apply(b[1]);
   const cardH=card.offsetHeight||260, cardW=card.offsetWidth||CARD_W;
-  let left=b[1][0]+GAP, top=b[0][1];
-  if(left+cardW>innerWidth-8) left=b[0][0]-cardW-GAP;   // 右にはみ出すなら左へ
+  const TOP_SAFE=132;   // 上部の操作パネル（地図選択・年代など）を避ける
+  let left=br[0]+GAP, top=tl[1];
+  if(left+cardW>innerWidth-8) left=tl[0]-cardW-GAP;      // 右に出るなら左へ
   left=Math.max(8, Math.min(left, innerWidth-cardW-8));
-  top =Math.max(70, Math.min(top,  innerHeight-cardH-8));
+  top =Math.max(TOP_SAFE, Math.min(top, innerHeight-cardH-8));
+  // 左上の操作パネル領域に重なるなら右にずらす
+  if(top<TOP_SAFE+10 && left<360) left=Math.min(innerWidth-cardW-8, 372);
   card.style.left=left+"px"; card.style.top=top+"px";
 }
 function repositionCards(){ openCards.forEach(({card,feature})=>positionCard(card,feature)); }
@@ -446,6 +479,7 @@ function closeCard(id){ openCards.get(id)?.card.remove(); openCards.delete(id); 
 /* ========================================================= */
 const mapSelect=document.getElementById("mapSelect");
 const themeSelect=document.getElementById("themeSelect");
+const subSelect=document.getElementById("subSelect");
 const applyBtn=document.getElementById("applyBtn");
 const freeSearch=document.getElementById("freeSearch");
 const toastEl=document.getElementById("mapToast");
@@ -462,18 +496,19 @@ async function initSdgControls(){
     try{ const r=await fetch("/api/sdg/goals"); const d=await r.json(); sdgGoals=d.goals||[]; }
     catch(_){ flashHint("SDGsデータの取得に失敗しました。サーバー起動を確認してください。"); return; }
   }
-  goalSelect.innerHTML=sdgGoals.map(g=>`<option value="${g.id}">${g.id}. ${g.title}</option>`).join("");
-  goalSelect.selectedIndex=0;
-  populateIndicatorSelect();
-  loadSdg();
+  goalSelect.innerHTML=`<option value="" disabled selected>目標を選ぼう</option>`
+    + sdgGoals.map(g=>`<option value="${g.id}">${g.id}. ${g.title}</option>`).join("");
+  indicatorSelect.innerHTML=`<option value="" disabled selected>指標</option>`;
+  updateModeTitle(); recolorMap();     // まだ色分けしない（テーマ選択待ち）
 }
 function populateIndicatorSelect(){
-  const g=sdgGoals.find(x=>String(x.id)===goalSelect.value)||sdgGoals[0];
+  const g=sdgGoals.find(x=>String(x.id)===goalSelect.value);
+  if(!g){ indicatorSelect.innerHTML=`<option value="" disabled selected>指標</option>`; return; }
   indicatorSelect.innerHTML=g.indicators.map(i=>`<option value="${i.key}">${i.label}</option>`).join("");
   indicatorSelect.selectedIndex=0;
-  indicatorSelect.hidden = (g.indicators.length<=1) ? false : false; // 常に表示（1つでも見せる）
 }
 async function loadSdg(){
+  if(!goalSelect.value || !indicatorSelect.value) return;
   playPulse(); closeAllCards();
   try{
     const r=await fetch(`/api/sdg?goal=${goalSelect.value}&indicator=${indicatorSelect.value}`);
@@ -529,6 +564,13 @@ decadeSlider.addEventListener("change", ()=>{
 function applyTheme(){
   const free=(freeSearch.value||"").trim();
   if(free && (currentMode==="imap" || currentMode==="env")){ runFreeSearch(); return; }
+  if(currentMode==="imap"){
+    const q=currentTopic();
+    if(!q){ flashHint("分野と小テーマを選ぶか、自由検索を入力してください。"); return; }
+    playPulse(); showToast(`「${q}」で表示中`);
+    openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
+    return;
+  }
   const val=themeSelect.value;
   if(!val){ flashHint(currentMode==="crops"?"作物を選んでください。":"テーマを選んでください。"); return; }
   playPulse();
@@ -544,7 +586,16 @@ function applyTheme(){
   }
 }
 applyBtn.addEventListener("click", applyTheme);
-themeSelect.addEventListener("change", applyTheme);
+themeSelect.addEventListener("change", ()=>{
+  if(currentMode==="imap"){ populateSubSelect(themeSelect.value); }   // 大分類→小テーマ
+  else applyTheme();
+});
+subSelect.addEventListener("change", ()=>{
+  const v=subSelect.value; if(!v) return;
+  playPulse(); showToast(`「${v}」で表示中`);
+  openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
+  document.getElementById("mapHint").textContent = `「${v}」で国をダブルクリックすると記事が開きます。`;
+});
 
 function runFreeSearch(){
   const q=(freeSearch.value||"").trim();
