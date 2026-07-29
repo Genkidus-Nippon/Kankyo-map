@@ -6,6 +6,7 @@
 const ENDPOINTS = {
   news:"/api/news", history:"/api/history", crops:"/api/crops",
   cropDetail:"/api/crop-detail", theme:"/api/theme", themeDetail:"/api/theme-detail",
+  aiArticles:"/api/ai-articles",
   contact:"/api/contact",
 };
 
@@ -13,6 +14,8 @@ const ENDPOINTS = {
 const MODES = {
   imap:    { title:"I-Map", type:"info", endpoint:ENDPOINTS.news,
              hint:"テーマを選び、国をダブルクリックすると関連する記事・情報が開きます。" },
+  aimap:   { title:"AI-Map", type:"aiinfo",
+             hint:"テーマを選び、国をダブルクリックするとAIが解説記事を生成します（参考情報）。" },
   env:     { title:"環境世界地図", type:"envdata", endpoint:ENDPOINTS.news,
              hint:"テーマ（温暖化など）で色分け。自由検索に語を入れて国クリックで記事も見られます。" },
   crops:   { title:"作物世界地図", type:"crops", endpoint:ENDPOINTS.crops,
@@ -22,8 +25,8 @@ const MODES = {
   user:    { title:"ユーザー世界地図", type:"user",
              hint:"利用者の声が多い国ほど赤。国をダブルクリックで声の一覧が見られます。" },
 };
-const MAP_MODES = ["imap","env","crops","sdg","user"];
-const HOME_MAPS = ["imap","env","crops","sdg"];   // HOMEに並べる4つ
+const MAP_MODES = ["imap","aimap","env","crops","sdg","user"];
+const HOME_MAPS = ["imap","aimap","env","crops","sdg"];
 
 const ENV_METRICS = { "温暖化":"warming","砂漠化":"desert","森林減少":"forest","水不足":"water","大気汚染":"air","CO2排出":"co2","海面上昇":"sea","生物多様性の損失":"biodiv" };
 let currentMetric = null;
@@ -95,6 +98,8 @@ function applyMode(){
     initSdgControls();
   } else if (m.type === "user"){
     loadUser();
+  } else if (m.type === "aiinfo"){
+    aiCounts={}; populateThemeSelect(); updateModeTitle(); recolorMap();
   } else {
     if (m.type === "info" || m.type === "crops") populateThemeSelect();
     updateModeTitle();
@@ -102,17 +107,18 @@ function applyMode(){
   }
 }
 function setControls(type){
-  const infoish = (type==="info");
-  themeSelect.hidden   = !(type==="info" || type==="crops" || type==="envdata");
-  subSelect.hidden     = !infoish;                 // I-Mapの小テーマ
-  applyBtn.hidden      = !(type==="crops" || type==="envdata" || type==="info");
-  freeSearch.hidden    = !(type==="info" || type==="envdata");
+  const infoish = (type==="info" || type==="aiinfo");
+  themeSelect.hidden   = !(infoish || type==="crops" || type==="envdata");
+  subSelect.hidden     = !infoish;                 // I-Map/AI-Mapの小テーマ
+  applyBtn.hidden      = !(type==="crops" || type==="envdata" || infoish);
+  freeSearch.hidden    = !(infoish || type==="envdata");
   decadeControl.hidden = (type!=="envdata");
   goalSelect.hidden     = (type!=="sdg");
   indicatorSelect.hidden= (type!=="sdg");
 }
+const isImapLike = () => currentMode==="imap" || currentMode==="aimap";
 function populateThemeSelect(){
-  if (currentMode==="imap"){                         // I-Map: 大分類を選ぶ
+  if (isImapLike()){                                 // I-Map/AI-Map: 大分類を選ぶ
     const cats = Object.keys(IMAP_CATEGORIES);
     themeSelect.innerHTML = `<option value="" disabled selected>分野を選ぼう</option>`
       + cats.map(c => `<option value="${c}">${c}</option>`).join("");
@@ -178,6 +184,7 @@ let cropData=null;     // 作物モードのデータ
 let themeData=null;    // 特化型モードのデータ
 let sdgData=null;      // SDGsモードのデータ
 let userData=null;     // ユーザーモードのデータ
+let aiCounts={};       // AI-Map: 国ごとの生成記事数（着色用）
 function activeChoro(){
   if (currentMode==="crops") return cropData;
   if (currentMode==="sdg") return sdgData;
@@ -229,6 +236,11 @@ const cropColor=d3.interpolateRgbBasis(["#2c7fb8","#7fcdbb","#fee08b","#f46d43",
 function colorForValue(v,max){ return cropColor(Math.min(1,Math.sqrt(Math.max(0,v)/max))); }
 function recolorMap(){
   if(!countrySel) return;
+  if(currentMode==="aimap"){                     // AI-Map: クリックした国をAI情報量で着色
+    countrySel.style("fill", d=>{ const n=aiCounts[d.properties.name]; return (n==null)?null:colorForValue(n,6); });
+    showAiLegend();
+    return;
+  }
   const dd = activeChoro();
   if(dd){
     if(dd.scoreData){                          // SDGs: 良好=青, 課題大=赤（0..1のスコア）
@@ -242,6 +254,14 @@ function recolorMap(){
     countrySel.style("fill",null); hideLegend();
   }
 }
+function showAiLegend(){
+  legendEl.querySelector(".legend-title").textContent="AIが見つけた情報量";
+  legendEl.querySelector(".legend-min").textContent="少ない";
+  legendEl.querySelector(".legend-max").textContent="多い";
+  legendEl.querySelector(".legend-note").textContent="国をダブルクリックで生成・着色（AI生成・参考情報）";
+  legendEl.querySelector(".legend-bar").style.background=`linear-gradient(90deg, ${[0,.25,.5,.75,1].map(t=>cropColor(t)).join(",")})`;
+  legendEl.hidden=false;
+}
 
 /* ホバー */
 let hoveredNode=null;
@@ -253,6 +273,7 @@ function resetHover(){ if(hoveredNode){ restCountry(hoveredNode); hoveredNode=nu
 function onCountryDblClick(feature){
   const type = MODES[currentMode].type;
   if (type==="crops") openCropCard(feature);
+  else if (type==="aiinfo") openAiCard(feature);
   else if (type==="envdata"){
     if((freeSearch.value||"").trim()) openInfoCard(feature);   // 自由検索中は記事
     else openThemeCard(feature);                               // それ以外はデータ詳細
@@ -291,7 +312,7 @@ const CARD_W=300, GAP=14;
 function currentTopic(){
   const free=(freeSearch.value||"").trim();
   if(free) return free;
-  if(currentMode==="imap") return (subSelect.value||"").trim();
+  if(isImapLike()) return (subSelect.value||"").trim();
   return (themeSelect.value||"").trim();
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
@@ -361,6 +382,43 @@ async function openInfoCard(feature){
   cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"info"});
   positionCard(card,feature); card.style.zIndex="40";
   await loadInfoCard(card,feature);
+}
+
+/* AI-Map: AIが解説記事を生成（参考情報・着色） */
+async function openAiCard(feature){
+  const topic=currentTopic();
+  if(!topic){ flashHint("分野と小テーマを選ぶか、自由検索を入力してください。"); return; }
+  closeAllCards();
+  const en=feature.properties.name, ja=jaName(en), id="ai_"+(feature.id||en.replace(/\W/g,""));
+  const card=document.createElement("div"); card.className="info-card"; card._id=id;
+  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"ai"});
+  positionCard(card,feature); card.style.zIndex="40";
+  const sub=`AI-Map: ${topic}`;
+  card.innerHTML=headCard(ja,sub)+`<div class="card-loading">AIが記事を生成しています…</div>`;
+  bindClose(card);
+
+  let d={};
+  try{
+    const qs=new URLSearchParams({country:ja,country_en:en,topic});
+    const r=await fetch(`${ENDPOINTS.aiArticles}?${qs.toString()}`);
+    if(r.ok) d=await r.json();
+  }catch(_){}
+
+  let body="";
+  if(d.ok && d.articles && d.articles.length){
+    body+=`<div class="ai-tagbar"><span class="ai-tag">AIによる生成記事（参考情報・Web記事ではありません）</span></div>`;
+    body+=`<ul class="news-list">`+d.articles.map(a=>
+      `<li><div class="ai-article"><h3>${escapeHtml(a.title)}</h3><p>${escapeHtml(a.body||"")}</p></div></li>`
+    ).join("")+`</ul>`;
+    aiCounts[en]=d.count||d.articles.length; recolorMap();
+  }else if(d.reason==="no_ai"){
+    body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(d.message||"AI-Mapの利用にはAPIキーが必要です。")}</span></li></ul>`;
+  }else{
+    body+=`<ul class="news-list"><li><span class="news-dead">この国×テーマではAI記事を生成できませんでした。別のテーマをお試しください。</span></li></ul>`;
+    aiCounts[en]=0; recolorMap();
+  }
+  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
+  requestAnimationFrame(()=>positionCard(card,feature));
 }
 
 async function openCropCard(feature){
@@ -563,12 +621,13 @@ decadeSlider.addEventListener("change", ()=>{
 
 function applyTheme(){
   const free=(freeSearch.value||"").trim();
-  if(free && (currentMode==="imap" || currentMode==="env")){ runFreeSearch(); return; }
-  if(currentMode==="imap"){
+  if(free && (isImapLike() || currentMode==="env")){ runFreeSearch(); return; }
+  if(isImapLike()){
     const q=currentTopic();
     if(!q){ flashHint("分野と小テーマを選ぶか、自由検索を入力してください。"); return; }
     playPulse(); showToast(`「${q}」で表示中`);
-    openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
+    if(currentMode==="aimap") openCards.forEach(({feature,kind})=>{ if(kind==="ai") openAiCard(feature); });
+    else openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
     return;
   }
   const val=themeSelect.value;
@@ -587,22 +646,30 @@ function applyTheme(){
 }
 applyBtn.addEventListener("click", applyTheme);
 themeSelect.addEventListener("change", ()=>{
-  if(currentMode==="imap"){ populateSubSelect(themeSelect.value); }   // 大分類→小テーマ
+  if(isImapLike()){ populateSubSelect(themeSelect.value); }   // 大分類→小テーマ
   else applyTheme();
 });
 subSelect.addEventListener("change", ()=>{
   const v=subSelect.value; if(!v) return;
   playPulse(); showToast(`「${v}」で表示中`);
-  openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
-  document.getElementById("mapHint").textContent = `「${v}」で国をダブルクリックすると記事が開きます。`;
+  const k = currentMode==="aimap" ? "ai" : "info";
+  openCards.forEach(({card,feature,kind})=>{ if(kind===k) (currentMode==="aimap"?openAiCard(feature):loadInfoCard(card,feature)); });
+  document.getElementById("mapHint").textContent = currentMode==="aimap"
+    ? `「${v}」で国をダブルクリックするとAIが記事を生成します。`
+    : `「${v}」で国をダブルクリックすると記事が開きます。`;
 });
 
 function runFreeSearch(){
   const q=(freeSearch.value||"").trim();
   if(!q) return;
   playPulse(); showToast(`「${q}」で検索中`);
-  openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
-  document.getElementById("mapHint").textContent = `「${q}」で記事を検索します。国をダブルクリックしてください。`;
+  if(currentMode==="aimap"){
+    openCards.forEach(({feature,kind})=>{ if(kind==="ai") openAiCard(feature); });
+    document.getElementById("mapHint").textContent = `「${q}」で国をダブルクリックするとAIが記事を生成します。`;
+  } else {
+    openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
+    document.getElementById("mapHint").textContent = `「${q}」で記事を検索します。国をダブルクリックしてください。`;
+  }
 }
 freeSearch.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); runFreeSearch(); } });
 
