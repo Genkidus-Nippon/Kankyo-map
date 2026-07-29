@@ -21,6 +21,8 @@ const MODES = {
              hint:"作物を選んで表示。収量で色が変わり、国をダブルクリックで詳細が出ます。" },
   sdg:     { title:"SDGs世界地図", type:"sdg",
              hint:"目標と指標を選ぶと、課題の大きい国が赤・良好な国が青で表示されます。国クリックで詳細。" },
+  user:    { title:"ユーザー世界地図", type:"user",
+             hint:"利用者の声が多い国ほど赤。国をダブルクリックで声の一覧が見られます。" },
   warming: { title:"温暖化世界地図", type:"theme", metric:"warming",
              hint:"年代スライダーを動かすと、気温上昇の分布が変わります。国クリックで詳細。" },
   desert:  { title:"砂漠化世界地図", type:"theme", metric:"desert",
@@ -32,7 +34,7 @@ const MODES = {
   air:     { title:"大気汚染世界地図", type:"theme", metric:"air",
              hint:"年代スライダーを動かすと、PM2.5の分布が変わります。国クリックで詳細。" },
 };
-const MAP_MODES = ["env","society","history","crops","sdg","warming","desert","forest","water","air"];
+const MAP_MODES = ["env","society","history","crops","sdg","user","warming","desert","forest","water","air"];
 
 /* 選択肢（テーマはこちらで提供。ここに追記すれば増やせます） */
 const THEMES = {
@@ -86,11 +88,13 @@ function applyMode(){
   mapSelect.value = currentMode;
   setControls(m.type);
   document.getElementById("mapHint").textContent = m.hint;
-  cropData=null; themeData=null; sdgData=null;      // 遷移時に色分けをリセット
+  cropData=null; themeData=null; sdgData=null; userData=null;   // 遷移時に色分けをリセット
   if (m.type === "theme"){
     loadTheme(+decadeSlider.value);
   } else if (m.type === "sdg"){
-    initSdgControls();                               // 目標・指標プルダウンを構築して表示
+    initSdgControls();
+  } else if (m.type === "user"){
+    loadUser();
   } else {
     if (m.type === "info" || m.type === "crops") populateThemeSelect();
     updateModeTitle();
@@ -105,9 +109,11 @@ function setControls(type){
   indicatorSelect.hidden= (type!=="sdg");
 }
 function populateThemeSelect(){
-  const opts = (currentMode==="crops") ? CROP_OPTIONS : THEMES[currentMode];
-  themeSelect.innerHTML = opts.map(o => `<option value="${o}">${o}</option>`).join("");
-  themeSelect.selectedIndex = 0;
+  const isCrop = (currentMode==="crops");
+  const opts = isCrop ? CROP_OPTIONS : THEMES[currentMode];
+  const ph = isCrop ? "作物を選ぼう" : "テーマを設定しよう";
+  themeSelect.innerHTML = `<option value="" disabled selected>${ph}</option>`
+    + opts.map(o => `<option value="${o}">${o}</option>`).join("");
 }
 function updateModeTitle(){
   const el = document.getElementById("mapModeTitle"), m = MODES[currentMode];
@@ -115,6 +121,8 @@ function updateModeTitle(){
     el.textContent = `${m.title}：${cropData.ja}（${cropData.year}年・出典 ${cropData.source}）`;
   } else if (currentMode==="sdg" && sdgData){
     el.textContent = `目標${sdgData.goalId}：${sdgData.goalTitle} ／ ${sdgData.label}`;
+  } else if (currentMode==="user"){
+    el.textContent = "ユーザー世界地図";
   } else if (m.type==="theme" && themeData){
     el.textContent = `${m.title}：${themeData.year}年（${themeData.unit}・${themeData.source}）`;
   } else {
@@ -153,9 +161,11 @@ let gRoot,path,projection,geo,countrySel;
 let cropData=null;     // 作物モードのデータ
 let themeData=null;    // 特化型モードのデータ
 let sdgData=null;      // SDGsモードのデータ
+let userData=null;     // ユーザーモードのデータ
 function activeChoro(){
   if (currentMode==="crops") return cropData;
   if (currentMode==="sdg") return sdgData;
+  if (currentMode==="user") return userData;
   if (MODES[currentMode].type==="theme") return themeData;
   return null;
 }
@@ -223,6 +233,7 @@ function onCountryDblClick(feature){
   if (type==="crops") openCropCard(feature);
   else if (type==="theme") openThemeCard(feature);
   else if (type==="sdg") openSdgCard(feature);
+  else if (type==="user") openUserCard(feature);
   else openInfoCard(feature);
 }
 
@@ -233,11 +244,13 @@ const legendEl=document.getElementById("cropLegend");
 function showLegend(){
   const dd = activeChoro(); if(!dd) return;
   const lowL = dd.lowLabel || "少ない", highL = dd.highLabel || "多い";
-  legendEl.querySelector(".legend-title").textContent=`${dd.ja}（${dd.unit}）`;
+  const scaleTop = dd.colorMax || dd.max;   // 赤端は固定スケール基準（年代で変えない）
+  legendEl.querySelector(".legend-title").textContent=`${dd.label||dd.ja}（${dd.unit}）`;
   legendEl.querySelector(".legend-min").textContent=lowL;
-  legendEl.querySelector(".legend-max").textContent=`${highL}（最大 ${fmt(dd.max)}）`;
+  legendEl.querySelector(".legend-max").textContent=`${highL}（基準 ${fmt(scaleTop)}）`;
   const noteSrc = dd.note ? `${dd.note} / ` : "";
-  legendEl.querySelector(".legend-note").textContent=`${noteSrc}${dd.year}年 / 出典 ${dd.source} / 灰色は未収録`;
+  const yearTxt = dd.year ? `${dd.year}年 / ` : "";
+  legendEl.querySelector(".legend-note").textContent=`${noteSrc}${yearTxt}出典 ${dd.source} / 灰色は未収録`;
   legendEl.querySelector(".legend-bar").style.background=`linear-gradient(90deg, ${[0,.25,.5,.75,1].map(t=>cropColor(t)).join(",")})`;
   legendEl.hidden=false;
 }
@@ -250,7 +263,7 @@ function fmt(n){ return (n>=1)?n.toLocaleString("ja-JP"):n; }
 const cardLayer=document.getElementById("cardLayer");
 const openCards=new Map();
 const CARD_W=300, GAP=14;
-function currentTopic(){ return (themeSelect.value||"").trim() || (currentMode==="history"?"歴史":"環境問題"); }
+function currentTopic(){ return (themeSelect.value||"").trim(); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 function closeAllCards(){ openCards.forEach(({card})=>card.remove()); openCards.clear(); }
 
@@ -306,6 +319,7 @@ async function loadInfoCard(card,feature){
 function bindClose(card){ card.querySelector(".card-close").addEventListener("click",()=>closeCard(card._id)); }
 
 async function openInfoCard(feature){
+  if(!currentTopic()){ flashHint("上のプルダウンからテーマを選んでください。"); return; }
   closeAllCards();                                   // 同時表示は1国のみ
   const en=feature.properties.name, id="c"+(feature.id||en.replace(/\W/g,""));
   const card=document.createElement("div"); card.className="info-card"; card._id=id;
@@ -366,6 +380,32 @@ async function openThemeCard(feature){
   }
   if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
   body+=`<p class="crop-src">${escapeHtml(themeData.note||"")}<br>出典: ${escapeHtml(themeData.source)}（代表値）</p></div>`;
+  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
+  requestAnimationFrame(()=>positionCard(card,feature));
+}
+
+async function loadUser(){
+  try{
+    const r=await fetch("/api/user"); const d=await r.json();
+    if(!d.ok){ flashHint("ユーザーデータの取得に失敗しました。"); return; }
+    userData=d; recolorMap(); updateModeTitle();
+  }catch(_){ flashHint("サーバーに接続できません。npm start で起動してください。"); }
+}
+async function openUserCard(feature){
+  if(!userData){ flashHint("データを読み込み中です。"); return; }
+  closeAllCards();
+  const en=feature.properties.name, ja=jaName(en), id="user_"+(feature.id||en.replace(/\W/g,""));
+  const msgs=(userData.messages&&userData.messages[en])||[];
+  const card=document.createElement("div"); card.className="info-card"; card._id=id;
+  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"user"});
+  positionCard(card,feature); card.style.zIndex="40";
+  const sub=`利用者の声 ${msgs.length}件`;
+  let body="";
+  if(msgs.length){
+    body=`<ul class="news-list">`+msgs.map(m=>`<li><span class="news-dead">${escapeHtml(m)}</span></li>`).join("")+`</ul>`;
+  }else{
+    body=`<p class="crop-none" style="padding:14px">この国にはまだ声が登録されていません。</p>`;
+  }
   card.innerHTML=headCard(ja,sub)+body; bindClose(card);
   requestAnimationFrame(()=>positionCard(card,feature));
 }
@@ -476,12 +516,12 @@ decadeSlider.addEventListener("change", ()=>{
 });
 
 function applyTheme(){
-  playPulse();
   const val=themeSelect.value;
+  if(!val){ flashHint(currentMode==="crops"?"作物を選んでください。":"テーマを選んでください。"); return; }
+  playPulse();
   if(currentMode==="crops"){ searchCrop(val); }
   else{
     showToast(`「${val}」で表示中`);
-    // 開いているカードがあれば新テーマで更新（1国のみ）
     openCards.forEach(({card,feature,kind})=>{ if(kind!=="crop") loadInfoCard(card,feature); });
   }
 }
