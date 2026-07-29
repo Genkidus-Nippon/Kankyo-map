@@ -1,619 +1,277 @@
+:root{
+  --bg:       #eef3fa;   /* 明るいベース（教育向け） */
+  --bg-soft:  #f7fafd;
+  --card:     #ffffff;
+  --ink:      #1f2a37;   /* 文字（濃紺グレー） */
+  --ink-soft: #55637a;
+  --line:     #e3e9f2;
+  --brand:    #2563eb;   /* 親しみやすいブルー */
+  --brand-d:  #1d4ed8;
+  --green:    #16a34a;
+  --accent:   #f59e0b;
+  --ocean:    #3b8fc4;   /* 海（少し明るめ） */
+  --ocean-2:  #2b6f9c;
+  --land:     #6cbf7c;   /* 陸 */
+  --land-hi:  #34b36a;   /* 浮いた陸 */
+  --nodata:   #d6dde7;
+  --f-disp: "Noto Sans JP", system-ui, sans-serif;   /* 大見出しもNoto Sans JPに */
+  --f-body: "Noto Sans JP", system-ui, sans-serif;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; height:100%; }
+body{
+  font-family:var(--f-body); background:var(--bg); color:var(--ink);
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+.view{ position:fixed; inset:0; }
+.view[hidden]{ display:none; }
+
+/* ============ トップバー & メニュー ============ */
+.topbar{ position:fixed; top:0; right:0; z-index:60; padding:16px 20px; }
+.menu-btn{
+  width:46px; height:40px; padding:9px 8px; display:flex; flex-direction:column; justify-content:space-between;
+  background:#fff; border:1px solid var(--line); border-radius:12px; cursor:pointer;
+  box-shadow:0 2px 10px rgba(30,42,55,.08); transition:box-shadow .2s;
+}
+.menu-btn:hover{ box-shadow:0 4px 16px rgba(30,42,55,.16); }
+.menu-btn span{ display:block; height:2px; background:var(--brand); border-radius:2px; transition:transform .28s, opacity .2s; }
+body.menu-open .menu-btn span:nth-child(1){ transform:translateY(9px) rotate(45deg); }
+body.menu-open .menu-btn span:nth-child(2){ opacity:0; }
+body.menu-open .menu-btn span:nth-child(3){ transform:translateY(-9px) rotate(-45deg); }
+
+.nav-menu{
+  position:fixed; top:0; right:0; z-index:55; width:min(320px,82vw); height:100%;
+  background:#fff; border-left:1px solid var(--line); box-shadow:-8px 0 30px rgba(30,42,55,.12);
+  transform:translateX(100%); transition:transform .34s cubic-bezier(.6,.02,.2,1);
+  padding:84px 22px 28px; display:flex; flex-direction:column; overflow-y:auto;
+}
+body.menu-open .nav-menu{ transform:translateX(0); }
+.nav-menu ul{ list-style:none; margin:0; padding:0; }
+.nav-link{
+  width:100%; text-align:left; background:none; border:none; cursor:pointer; color:var(--ink);
+  font-family:var(--f-body); font-size:1.05rem; font-weight:700; padding:12px 14px; border-radius:10px;
+  transition:background .18s, color .18s, padding-left .18s;
+}
+.nav-link:hover{ background:#eef4ff; color:var(--brand); padding-left:20px; }
+.nav-div{ height:1px; background:var(--line); margin:10px 6px; list-style:none; }
+.nav-foot{ margin-top:auto; color:var(--ink-soft); font-size:.8rem; }
+.scrim{ position:fixed; inset:0; z-index:50; background:rgba(20,30,45,.35); border:0; }
+
+/* ============ トップ画（明るい） ============ */
+.view-home{ background:linear-gradient(165deg,#eaf3ff 0%,#f4fbff 45%,#eef7f0 100%); overflow-y:auto; }
+.sakura-canvas{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.branch{ position:absolute; top:0; left:0; width:min(42vw,470px); height:auto; opacity:.9; pointer-events:none; }
+
+.hero-wrap{ position:relative; z-index:2; max-width:920px; margin:0 auto; padding:96px 24px 60px; text-align:center; }
+.hero-plate{
+  display:inline-block; padding:36px 40px; background:rgba(255,255,255,.72);
+  border:1px solid var(--line); border-radius:24px; box-shadow:0 12px 40px rgba(37,99,235,.10); backdrop-filter:blur(4px);
+}
+.hero-main{ display:block; font-family:var(--f-disp); font-weight:800; font-size:clamp(3rem,8vw,5.4rem); letter-spacing:.16em; color:var(--brand-d); }
+.hero-sub{ display:block; margin-top:8px; letter-spacing:.34em; font-size:.72rem; color:var(--ink-soft); }
+.hero-lead{ margin:16px 0 26px; color:var(--ink-soft); font-size:.95rem; }
+.hero-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; max-width:760px; margin:0 auto; }
+.hero-card{
+  display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer;
+  padding:18px 8px; background:#fff; border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 4px 14px rgba(30,42,55,.06); transition:transform .18s, box-shadow .18s, border-color .18s;
+}
+.hero-card:hover{ transform:translateY(-5px); box-shadow:0 12px 26px rgba(37,99,235,.18); border-color:var(--brand); }
+.hc-emoji{ font-size:1.9rem; }
+.hc-title{ font-family:var(--f-disp); font-weight:700; font-size:.92rem; color:var(--ink); }
+.hc-desc{ font-size:.68rem; color:var(--ink-soft); }
+
+/* ============ 世界地図 ============ */
+.view-map{ background:var(--ocean); }
+.map-wrap{ position:absolute; inset:0; }
+.world-map{ width:100%; height:100%; display:block; background:var(--ocean); user-select:none; -webkit-user-select:none; }
+.world-map *{ user-select:none; -webkit-user-select:none; }
+.ocean{ fill:var(--ocean); }
+.country{ fill:var(--land); stroke:#eaf3f8; stroke-width:.4px; cursor:pointer; transition:fill .2s; }
+.country.is-hover{ fill:var(--land-hi); filter:url(#lift); }
+
+.map-loading{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#f4faff; font-size:.95rem; }
+.map-hint{
+  position:absolute; left:24px; bottom:18px; margin:0; z-index:5; color:var(--ink);
+  font-size:.8rem; background:rgba(255,255,255,.92); padding:9px 13px; border-radius:10px;
+  box-shadow:0 4px 14px rgba(30,42,55,.12); max-width:min(70vw,560px);
+}
+.map-hint.flash{ background:var(--brand); color:#fff; }
+
+/* コントロール（明るく読みやすいプルダウン） */
+.map-controls{ position:absolute; top:20px; left:20px; z-index:10; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ctrl-select{
+  font-family:var(--f-body); font-size:.9rem; color:var(--ink); cursor:pointer;
+  padding:10px 34px 10px 14px; border-radius:12px; border:1px solid var(--line);
+  background:#fff; box-shadow:0 2px 10px rgba(30,42,55,.10); appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%232563eb' stroke-width='1.8' fill='none'/></svg>");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+.ctrl-select:hover{ border-color:var(--brand); }
+.ctrl-select:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+.ctrl-select option{ color:var(--ink); background:#fff; }
+.search-btn{
+  font-family:var(--f-body); font-size:.9rem; font-weight:700; cursor:pointer; color:#fff;
+  padding:10px 20px; border-radius:12px; border:none; background:var(--brand);
+  box-shadow:0 2px 10px rgba(37,99,235,.25); transition:background .18s, transform .15s;
+}
+.search-btn:hover{ background:var(--brand-d); transform:translateY(-1px); }
+.map-mode-title{
+  position:absolute; top:74px; left:20px; z-index:6; color:var(--ink); font-family:var(--f-disp); font-weight:700;
+  font-size:1rem; background:rgba(255,255,255,.92); padding:6px 12px; border-radius:10px; box-shadow:0 3px 12px rgba(30,42,55,.12);
+}
+.decade-control{ display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
+  border-radius:12px; padding:8px 14px; box-shadow:0 2px 10px rgba(30,42,55,.10); }
+.decade-control input[type="range"]{ width:150px; accent-color:var(--brand); cursor:pointer; }
+.decade-label{ color:var(--ink); font-weight:700; font-size:.9rem; min-width:56px; text-align:right; }
+
+/* 確定モーション */
+.map-pulse{ position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
+.map-pulse::after{ content:""; width:40px; height:40px; border-radius:50%; border:3px solid #fff; opacity:0; transform:scale(.2); }
+.map-pulse.go::after{ animation:pulseRing .7s ease-out; }
+@keyframes pulseRing{ 0%{opacity:.85;transform:scale(.2);} 70%{opacity:.3;} 100%{opacity:0;transform:scale(22);} }
+.map-toast{
+  position:absolute; top:120px; left:50%; transform:translateX(-50%) translateY(-8px); z-index:11;
+  background:var(--brand); color:#fff; font-weight:700; font-size:.9rem; padding:10px 22px; border-radius:24px;
+  box-shadow:0 8px 24px rgba(37,99,235,.3); opacity:0; transition:opacity .3s, transform .3s;
+}
+.map-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* 凡例 */
+.crop-legend{
+  position:absolute; right:22px; bottom:18px; z-index:6; width:min(46vw,290px);
+  background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 14px; color:var(--ink);
+  box-shadow:0 6px 22px rgba(30,42,55,.14);
+}
+.legend-title{ font-weight:700; font-size:.85rem; }
+.legend-bar{ height:12px; border-radius:6px; margin:8px 0 4px; }
+.legend-scale{ display:flex; justify-content:space-between; font-size:.72rem; color:var(--ink-soft); }
+.legend-note{ display:block; margin-top:6px; font-size:.66rem; color:var(--ink-soft); }
+
+/* ============ カード ============ */
+.card-layer{ position:absolute; inset:0; pointer-events:none; z-index:20; }
+.info-card{
+  position:absolute; width:310px; max-height:min(66vh,520px); display:flex; flex-direction:column; pointer-events:auto;
+  background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 16px 44px rgba(30,42,55,.22); overflow:hidden; animation:cardIn .18s ease-out;
+}
+@keyframes cardIn{ from{opacity:0; transform:translateY(6px) scale(.98);} to{opacity:1; transform:none;} }
+.card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:14px 14px 10px; border-bottom:1px solid var(--line); }
+.card-head h2{ margin:0; font-family:var(--f-disp); font-size:1.25rem; line-height:1.2; color:var(--ink); }
+.card-head .sample-tag{ display:block; margin-top:4px; font-size:.68rem; color:var(--ink-soft); }
+.card-close{ border:none; background:none; color:var(--ink-soft); cursor:pointer; font-size:1.25rem; line-height:1; padding:0 2px; }
+.card-close:hover{ color:var(--ink); }
+.news-list{ list-style:none; margin:0; padding:6px 14px 4px; overflow-y:auto; }
+.news-list li{ border-top:1px solid var(--line); }
+.news-list li:first-child{ border-top:none; }
+.news-list li[hidden]{ display:none; }
+.news-list a{ display:block; padding:11px 2px; color:var(--ink); text-decoration:none; font-size:.9rem; line-height:1.45; transition:color .18s, padding-left .18s; }
+.news-list a:hover{ color:var(--brand); padding-left:6px; }
+.news-src{ display:block; margin-top:3px; font-size:.68rem; color:#8a97ab; }
+.news-desc{ display:block; margin-top:3px; font-size:.74rem; color:var(--ink-soft); line-height:1.4; }
+.news-dead{ display:block; padding:11px 2px; color:var(--ink-soft); font-size:.9rem; }
+.card-loading{ padding:20px 16px; font-size:.9rem; color:var(--ink-soft); }
+.more-btn{
+  margin:2px 14px 14px; padding:9px 14px; width:calc(100% - 28px); cursor:pointer; font-family:var(--f-body);
+  font-weight:700; font-size:.85rem; color:var(--brand); background:#eef4ff; border:1px solid #d5e2fb; border-radius:10px;
+}
+.more-btn:hover{ background:#e0ecff; }
+
+.ai-overview{ margin:6px 14px 4px; padding:12px 14px; background:#eafaf0; border:1px solid #bfe9cf; border-radius:12px; }
+.ai-tag{ display:inline-block; margin-bottom:6px; font-size:.66rem; font-weight:700; color:var(--green); }
+.ai-overview p{ margin:0; font-size:.86rem; line-height:1.6; color:#234634; }
+
+.crop-detail{ padding:14px; }
+.crop-stat{ display:flex; align-items:baseline; gap:6px; }
+.cs-num{ font-family:var(--f-disp); font-weight:800; font-size:2.1rem; color:var(--brand-d); }
+.cs-unit{ font-size:.85rem; color:var(--ink-soft); }
+.crop-rank{ margin:6px 0 0; font-size:.86rem; color:var(--ink); }
+.crop-none{ margin:0; font-size:.9rem; color:var(--ink-soft); }
+.crop-src{ margin:12px 0 0; font-size:.68rem; color:var(--ink-soft); line-height:1.5; }
+
+/* ============ About / Contact ============ */
+.view-about, .view-contact{ background:var(--bg); overflow-y:auto; }
+.panel{ max-width:760px; margin:0 auto; padding:110px 28px 80px; color:var(--ink); }
+.eyebrow{ letter-spacing:.4em; font-size:.72rem; color:var(--brand); margin:0 0 10px; }
+.panel h1{ font-family:var(--f-disp); font-weight:800; font-size:clamp(2rem,5vw,3.2rem); margin:0 0 14px; letter-spacing:.04em; }
+.lead{ font-size:1.12rem; color:var(--ink-soft); margin:0 0 22px; }
+.panel p{ line-height:1.9; color:var(--ink); }
+.how{ margin:30px 0 8px; display:grid; gap:14px; }
+.how-item{ display:flex; gap:18px; align-items:flex-start; padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 3px 12px rgba(30,42,55,.06); }
+.how-n{ font-size:1.7rem; min-width:2ch; }
+.how-item h3{ margin:0 0 4px; font-size:1.05rem; }
+.how-item p{ margin:0; font-size:.92rem; color:var(--ink-soft); }
+.about-cta{ display:flex; gap:12px; flex-wrap:wrap; }
+.cta{
+  margin-top:26px; display:inline-block; cursor:pointer; background:var(--brand); color:#fff; border:none;
+  font-family:var(--f-body); font-weight:700; font-size:1rem; padding:14px 32px; border-radius:999px;
+  box-shadow:0 6px 18px rgba(37,99,235,.25); transition:transform .2s, background .2s;
+}
+.cta:hover{ transform:translateY(-2px); background:var(--brand-d); }
+.cta.ghost{ background:#fff; color:var(--brand); border:1px solid var(--brand); box-shadow:none; }
+.cta.ghost:hover{ background:#eef4ff; }
+
+.c-form{ margin-top:26px; display:grid; gap:18px; max-width:520px; }
+.c-form label{ display:grid; gap:8px; font-size:.9rem; color:var(--ink-soft); }
+.c-form input, .c-form textarea{
+  font-family:var(--f-body); font-size:1rem; color:var(--ink); background:#fff; border:1px solid var(--line);
+  border-radius:10px; padding:12px 14px; resize:vertical;
+}
+.c-form input:focus, .c-form textarea:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+.form-note{ min-height:1.2em; font-size:.9rem; color:var(--green); }
+.form-note.error{ color:#dc2626; }
+
+:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+
+/* ============ モバイル ============ */
+@media (max-width:720px){
+  .hero-grid{ grid-template-columns:repeat(3,1fr); }
+  .map-controls{ top:14px; left:14px; right:14px; }
+  .ctrl-select{ flex:1 1 40%; }
+  .decade-control input[type="range"]{ width:110px; }
+  .info-card{ width:min(90vw,310px); }
+  .crop-legend{ left:14px; right:14px; width:auto; }
+}
+
 /* =========================================================
-   I-MAP — script.js
-   モード: env(環境) / society(現社) / history(歴史) / crops(作物)
+   Imaps 追加: フッター・スポンサー枠・出典ページ・SDG目標
    ========================================================= */
+.hero-main{ font-weight:800; }
 
-const ENDPOINTS = {
-  news:"/api/news", history:"/api/history", crops:"/api/crops",
-  cropDetail:"/api/crop-detail", theme:"/api/theme", themeDetail:"/api/theme-detail",
-  contact:"/api/contact",
-};
-
-/* 最終構成: I-Map(記事統合) / 環境(データ) / 作物 / SDGs（＋ユーザー） */
-const MODES = {
-  imap:    { title:"I-Map", type:"info", endpoint:ENDPOINTS.news,
-             hint:"テーマを選び、国をダブルクリックすると関連する記事・情報が開きます。" },
-  env:     { title:"環境世界地図", type:"envdata",
-             hint:"テーマ（温暖化など）と年代を選ぶと、進行度が色で分かります。国クリックで詳細。" },
-  crops:   { title:"作物世界地図", type:"crops", endpoint:ENDPOINTS.crops,
-             hint:"作物を選んで表示。収量で色が変わり、国をダブルクリックで詳細が出ます。" },
-  sdg:     { title:"SDGs世界地図", type:"sdg",
-             hint:"目標と指標を選ぶと、達成状況が色で分かります。国クリックで詳細（定量目標つき）。" },
-  user:    { title:"ユーザー世界地図", type:"user",
-             hint:"利用者の声が多い国ほど赤。国をダブルクリックで声の一覧が見られます。" },
-};
-const MAP_MODES = ["imap","env","crops","sdg","user"];
-const HOME_MAPS = ["imap","env","crops","sdg"];   // HOMEに並べる4つ
-
-const ENV_METRICS = { "温暖化":"warming","砂漠化":"desert","森林減少":"forest","水不足":"water","大気汚染":"air" };
-let currentMetric = null;
-
-/* 選択肢（テーマはこちらで提供） */
-const THEMES = {
-  imap: ["温暖化","気候変動","森林破壊","大気汚染","海洋プラスチック","生物多様性","水資源","再生可能エネルギー",
-         "貧困","難民・移民","紛争・戦争","ジェンダー平等","教育","感染症","食料危機","経済格差","人権","災害","人口問題"],
-  env:  ["温暖化","砂漠化","森林減少","水不足","大気汚染"],   // env はメトリクスを選ぶ
-};
-const CROP_OPTIONS = ["米","小麦","とうもろこし","大豆","コーヒー","じゃがいも"];
-
-const TOPIC_EN = {
-  "環境問題":"environment","環境":"environment","温暖化":"global warming","気候変動":"climate change",
-  "再生可能エネルギー":"renewable energy","森林破壊":"deforestation","大気汚染":"air pollution",
-  "海洋プラスチック":"ocean plastic","干ばつ":"drought","山火事":"wildfire","生物多様性":"biodiversity",
-  "水資源":"water resources","貧困":"poverty","難民・移民":"refugees migration","紛争・戦争":"conflict war",
-  "ジェンダー平等":"gender equality","教育格差":"education gap","人口問題":"population","感染症":"epidemic",
-  "食料危機":"food crisis","経済格差":"inequality","人権":"human rights"
-};
-function topicToEn(t){ return TOPIC_EN[(t||"").trim()] || (t||"").trim() || "environment"; }
-
-/* ========================================================= */
-/* ビュー切替（最初は必ずHOME）                              */
-/* ========================================================= */
-const views = {
-  home:document.getElementById("view-home"), map:document.getElementById("view-map"),
-  about:document.getElementById("view-about"), contact:document.getElementById("view-contact"),
-  sources:document.getElementById("view-sources"),
-};
-let mapReady=false, currentMode="env";
-
-function showView(name){
-  const isMap = MAP_MODES.includes(name);
-  const viewKey = isMap ? "map" : (views[name] ? name : "home");
-  Object.entries(views).forEach(([k,el]) => { el.hidden = (k!==viewKey); });
-  document.body.dataset.view = viewKey;
-  closeMenu();
-  closeAllCards();                 // 画面遷移でカードを閉じる
-
-  if (isMap){
-    currentMode = name;
-    if (!mapReady) initMap().then(applyMode); else applyMode();
-  }
-  if (viewKey==="home") startSakura(); else stopSakura();
-
-  const hash = isMap ? name : viewKey;
-  if (location.hash !== `#${hash}`) history.replaceState(null,"",`#${hash}`);
+/* フッター */
+.site-footer{
+  margin-top:40px; padding:26px 20px 40px; border-top:1px solid var(--line);
+  text-align:center; color:var(--ink-soft);
 }
-window.addEventListener("hashchange", () => showView(location.hash.replace("#","")||"home"));
+.foot-links{ display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:12px; }
+.foot-link{ background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:.85rem; font-family:var(--f-body); }
+.foot-link:hover{ color:var(--brand); text-decoration:underline; }
+.copyright{ margin:0; font-size:.82rem; letter-spacing:.06em; color:var(--ink-soft); }
 
-/* モードごとのUIを適用（テーマ選択肢の入替＝検索内容のリセットも兼ねる） */
-function applyMode(){
-  const m = MODES[currentMode];
-  mapSelect.value = currentMode;
-  setControls(m.type);
-  document.getElementById("mapHint").textContent = m.hint;
-  cropData=null; themeData=null; sdgData=null; userData=null; currentMetric=null;
-  if (m.type === "envdata"){
-    populateThemeSelect();          // メトリクス（温暖化等）を選ぶ
-    updateModeTitle(); recolorMap();
-  } else if (m.type === "sdg"){
-    initSdgControls();
-  } else if (m.type === "user"){
-    loadUser();
-  } else {
-    if (m.type === "info" || m.type === "crops") populateThemeSelect();
-    updateModeTitle();
-    recolorMap();
-  }
+/* スポンサー/アフィリエイト枠 */
+.sponsor-slot{
+  margin:30px auto 0; max-width:640px; padding:22px; text-align:center;
+  background:repeating-linear-gradient(45deg,#f6f9fe,#f6f9fe 10px,#eef3fb 10px,#eef3fb 20px);
+  border:1px dashed #c2d2ea; border-radius:14px; color:var(--ink-soft);
 }
-function setControls(type){
-  themeSelect.hidden   = !(type==="info" || type==="crops" || type==="envdata");
-  applyBtn.hidden      = !(type==="info" || type==="crops");
-  decadeControl.hidden = (type!=="envdata");
-  goalSelect.hidden     = (type!=="sdg");
-  indicatorSelect.hidden= (type!=="sdg");
-}
-function populateThemeSelect(){
-  const isCrop = (currentMode==="crops");
-  const opts = isCrop ? CROP_OPTIONS : THEMES[currentMode];
-  const ph = isCrop ? "作物を選ぼう" : (currentMode==="env" ? "テーマを選ぼう（温暖化など）" : "テーマを設定しよう");
-  themeSelect.innerHTML = `<option value="" disabled selected>${ph}</option>`
-    + opts.map(o => `<option value="${o}">${o}</option>`).join("");
-}
-function updateModeTitle(){
-  const el = document.getElementById("mapModeTitle"), m = MODES[currentMode];
-  if (currentMode==="crops" && cropData){
-    el.textContent = `${m.title}：${cropData.ja}（${cropData.year}年・出典 ${cropData.source}）`;
-  } else if (currentMode==="sdg" && sdgData){
-    el.textContent = `目標${sdgData.goalId}：${sdgData.goalTitle} ／ ${sdgData.label}`;
-  } else if (currentMode==="user"){
-    el.textContent = "ユーザー世界地図";
-  } else if (currentMode==="env" && themeData){
-    el.textContent = `環境世界地図：${themeData.ja}／${themeData.year}年`;
-  } else {
-    el.textContent = m.title;
-  }
-}
+.sponsor-label{ display:inline-block; font-size:.64rem; font-weight:700; letter-spacing:.18em; color:#8aa0c0; margin-bottom:6px; }
+.sponsor-slot p{ margin:0; font-size:.86rem; }
 
-/* ========================================================= */
-/* メニュー                                                  */
-/* ========================================================= */
-const menuBtn=document.getElementById("menuBtn"), navMenu=document.getElementById("navMenu"), scrim=document.getElementById("scrim");
-function openMenu(){ document.body.classList.add("menu-open"); menuBtn.setAttribute("aria-expanded","true"); navMenu.setAttribute("aria-hidden","false"); scrim.hidden=false; }
-function closeMenu(){ document.body.classList.remove("menu-open"); menuBtn.setAttribute("aria-expanded","false"); navMenu.setAttribute("aria-hidden","true"); scrim.hidden=true; }
-menuBtn.addEventListener("click", ()=> document.body.classList.contains("menu-open")?closeMenu():openMenu());
-scrim.addEventListener("click", closeMenu);
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeMenu(); });
+/* 出典ページ */
+.view-sources{ background:var(--bg); overflow-y:auto; }
+.src-list{ margin-top:22px; display:grid; gap:16px; }
+.src-item{ padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 3px 12px rgba(30,42,55,.06); }
+.src-item h3{ margin:0 0 8px; font-size:1.02rem; }
+.src-item ul{ margin:0; padding-left:18px; }
+.src-item li{ font-size:.9rem; line-height:1.9; color:var(--ink); }
+.src-item a{ color:var(--brand); text-decoration:none; }
+.src-item a:hover{ text-decoration:underline; }
 
-/* ========================================================= */
-/* 桜アニメーション                                          */
-/* ========================================================= */
-const canvas=document.getElementById("sakura"), ctx=canvas.getContext("2d");
-let petals=[], sakuraRAF=null, sakuraOn=false;
-function sizeCanvas(){ const d=window.devicePixelRatio||1; canvas.width=innerWidth*d; canvas.height=innerHeight*d; ctx.setTransform(d,0,0,d,0,0); }
-function makePetal(){ return {x:Math.random()*innerWidth,y:Math.random()*-innerHeight,r:6+Math.random()*8,sp:0.6+Math.random()*1.4,sway:Math.random()*Math.PI*2,swaySp:0.01+Math.random()*0.03,rot:Math.random()*Math.PI,rotSp:(Math.random()-0.5)*0.04,op:0.5+Math.random()*0.5}; }
-function drawPetal(p){ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=p.op; const g=ctx.createLinearGradient(-p.r,0,p.r,0); g.addColorStop(0,"#f9c3d6"); g.addColorStop(1,"#f08bb0"); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,-p.r); ctx.quadraticCurveTo(p.r*0.9,-p.r*0.2,0,p.r); ctx.quadraticCurveTo(-p.r*0.9,-p.r*0.2,0,-p.r); ctx.fill(); ctx.restore(); }
-function tick(){ ctx.clearRect(0,0,innerWidth,innerHeight); for(const p of petals){ p.sway+=p.swaySp; p.x+=Math.sin(p.sway)*0.8; p.y+=p.sp; p.rot+=p.rotSp; if(p.y-p.r>innerHeight){ Object.assign(p,makePetal(),{y:-10}); } drawPetal(p); } sakuraRAF=requestAnimationFrame(tick); }
-function startSakura(){ if(sakuraOn) return; sakuraOn=true; sizeCanvas(); const n=Math.min(120,Math.round(innerWidth/13)); petals=Array.from({length:n},makePetal); tick(); }
-function stopSakura(){ sakuraOn=false; if(sakuraRAF) cancelAnimationFrame(sakuraRAF); }
-addEventListener("resize", ()=>{ if(sakuraOn) sizeCanvas(); });
+/* カード内の「出典」リンク */
+.src-link{ color:var(--brand); font-weight:700; text-decoration:none; border-bottom:1px solid currentColor; }
+.src-link:hover{ color:var(--brand-d); }
 
-/* ========================================================= */
-/* 世界地図                                                  */
-/* ========================================================= */
-const svg=d3.select("#worldMap"), loading=document.getElementById("mapLoading");
-let gRoot,path,projection,geo,countrySel;
-let cropData=null;     // 作物モードのデータ
-let themeData=null;    // 特化型モードのデータ
-let sdgData=null;      // SDGsモードのデータ
-let userData=null;     // ユーザーモードのデータ
-function activeChoro(){
-  if (currentMode==="crops") return cropData;
-  if (currentMode==="sdg") return sdgData;
-  if (currentMode==="user") return userData;
-  if (MODES[currentMode].type==="envdata") return themeData;
-  return null;
-}
-
-async function initMap(){
-  mapReady=true;
-  try{
-    const topo=await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
-    geo=topojson.feature(topo,topo.objects.countries).features;
-    svg.append("rect").attr("class","ocean").attr("width","100%").attr("height","100%");
-    const defs=svg.append("defs");
-    const f=defs.append("filter").attr("id","lift").attr("x","-40%").attr("y","-40%").attr("width","180%").attr("height","180%");
-    f.append("feDropShadow").attr("dx",0).attr("dy",4).attr("stdDeviation",6).attr("flood-color","#06202b").attr("flood-opacity",0.55);
-    gRoot=svg.append("g");
-    projection=d3.geoNaturalEarth1(); path=d3.geoPath(projection);
-    countrySel=gRoot.selectAll("path.country").data(geo).enter().append("path")
-      .attr("class","country").on("mouseenter",onEnter).on("mouseleave",onLeave)
-      .on("dblclick",(e,d)=>{ e.preventDefault(); onCountryDblClick(d); });
-    svg.on("mouseleave",resetHover);
-    fitMap(); loading.hidden=true;
-    addEventListener("resize", ()=>{ fitMap(); repositionCards(); });
-  }catch(err){ loading.textContent="地図データを読み込めませんでした。インターネット接続をご確認ください。"; console.error(err); }
-}
-function fitMap(){
-  const w=innerWidth,h=innerHeight; svg.attr("width",w).attr("height",h);
-  const fc={type:"FeatureCollection",features:geo};
-  projection.fitSize([w,h],fc);
-  let b=d3.geoPath(projection).bounds(fc);
-  const k=Math.max(w/(b[1][0]-b[0][0]),h/(b[1][1]-b[0][1]))*1.02;
-  projection.scale(projection.scale()*k);
-  b=d3.geoPath(projection).bounds(fc);
-  const cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2, [tx,ty]=projection.translate();
-  projection.translate([tx+(w/2-cx),ty+(h/2-cy)]);
-  path=d3.geoPath(projection); gRoot.selectAll("path.country").attr("d",path);
-}
-
-/* 収量→色（青=少 → 赤=多） */
-const cropColor=d3.interpolateRgbBasis(["#2c7fb8","#7fcdbb","#fee08b","#f46d43","#d73027"]);
-function colorForValue(v,max){ return cropColor(Math.min(1,Math.sqrt(Math.max(0,v)/max))); }
-function recolorMap(){
-  if(!countrySel) return;
-  const dd = activeChoro();
-  if(dd){
-    if(dd.scoreData){                          // SDGs: 良好=青, 課題大=赤（0..1のスコア）
-      countrySel.style("fill", d=>{ const s=dd.scoreData[d.properties.name]; return s==null?"var(--nodata)":cropColor(s); });
-    } else {
-      const max = dd.colorMax || dd.max || 1;   // 特化型は固定スケール
-      countrySel.style("fill", d=>{ const v=dd.data[d.properties.name]; return v==null?"var(--nodata)":colorForValue(v,max); });
-    }
-    showLegend();
-  }else{
-    countrySel.style("fill",null); hideLegend();
-  }
-}
-
-/* ホバー */
-let hoveredNode=null;
-function liftCountry(node,d){ const [cx,cy]=path.centroid(d); if(!isFinite(cx)) return; d3.select(node).raise().classed("is-hover",true).interrupt().transition().duration(200).ease(d3.easeCubicOut).attr("transform",`translate(${cx},${cy}) scale(1.09) translate(${-cx},${-cy})`); }
-function restCountry(node){ d3.select(node).classed("is-hover",false).interrupt().transition().duration(200).ease(d3.easeCubicOut).attr("transform","translate(0,0) scale(1)"); }
-function onEnter(event,d){ if(hoveredNode&&hoveredNode!==this) restCountry(hoveredNode); hoveredNode=this; liftCountry(this,d); }
-function onLeave(){ if(hoveredNode===this) hoveredNode=null; restCountry(this); }
-function resetHover(){ if(hoveredNode){ restCountry(hoveredNode); hoveredNode=null; } }
-function onCountryDblClick(feature){
-  const type = MODES[currentMode].type;
-  if (type==="crops") openCropCard(feature);
-  else if (type==="envdata") openThemeCard(feature);
-  else if (type==="sdg") openSdgCard(feature);
-  else if (type==="user") openUserCard(feature);
-  else openInfoCard(feature);
-}
-
-/* ========================================================= */
-/* 凡例                                                      */
-/* ========================================================= */
-const legendEl=document.getElementById("cropLegend");
-function showLegend(){
-  const dd = activeChoro(); if(!dd) return;
-  const lowL = dd.lowLabel || "少ない", highL = dd.highLabel || "多い";
-  const scaleTop = dd.colorMax || dd.max;   // 赤端は固定スケール基準（年代で変えない）
-  legendEl.querySelector(".legend-title").textContent=`${dd.label||dd.ja}（${dd.unit}）`;
-  legendEl.querySelector(".legend-min").textContent=lowL;
-  legendEl.querySelector(".legend-max").textContent=`${highL}（基準 ${fmt(scaleTop)}）`;
-  const noteSrc = dd.note ? `${dd.note} / ` : "";
-  const yearTxt = dd.year ? `${dd.year}年 / ` : "";
-  legendEl.querySelector(".legend-note").textContent=`${noteSrc}${yearTxt}出典 ${dd.source} / 灰色は未収録`;
-  legendEl.querySelector(".legend-bar").style.background=`linear-gradient(90deg, ${[0,.25,.5,.75,1].map(t=>cropColor(t)).join(",")})`;
-  legendEl.hidden=false;
-}
-function hideLegend(){ legendEl.hidden=true; }
-function fmt(n){ return (n>=1)?n.toLocaleString("ja-JP"):n; }
-
-/* ========================================================= */
-/* カード（1国のみ同時表示・画面外に出さない）               */
-/* ========================================================= */
-const cardLayer=document.getElementById("cardLayer");
-const openCards=new Map();
-const CARD_W=300, GAP=14;
-function currentTopic(){ return (themeSelect.value||"").trim(); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
-function closeAllCards(){ openCards.forEach(({card})=>card.remove()); openCards.clear(); }
-
-function headCard(titleJa,sub){ return `<div class="card-head"><div><h2>${escapeHtml(titleJa)}</h2><span class="sample-tag">${escapeHtml(sub)}</span></div><button class="card-close" aria-label="閉じる">×</button></div>`; }
-function renderArticles(articles, visible=8){
-  return articles.map((a,i)=>{
-    const hid = i>=visible ? " hidden" : "";
-    const src=a.source?`<span class="news-src">${escapeHtml(a.source)}</span>`:"";
-    const desc=a.desc?`<span class="news-desc">${escapeHtml(a.desc).slice(0,90)}…</span>`:"";
-    if(!a.url||a.url==="#") return `<li${hid}><span class="news-dead">${escapeHtml(a.title)}</span></li>`;
-    return `<li${hid}><a href="${encodeURI(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.title)}${desc}${src}</a></li>`;
-  }).join("");
-}
-function bindMore(card){
-  const btn=card.querySelector("[data-more]");
-  if(!btn) return;
-  btn.addEventListener("click", ()=>{
-    card.querySelectorAll(".news-list li[hidden]").forEach(li=>li.removeAttribute("hidden"));
-    btn.remove();
-    requestAnimationFrame(()=>{ const e=openCards.get(card._id); if(e) positionCard(card,e.feature); });
-  });
-}
-function bindSrcLink(card){
-  card.querySelectorAll(".src-link[data-go]").forEach(a=>{
-    a.addEventListener("click", e=>{ e.preventDefault(); showView("sources"); });
-  });
-}
-async function fetchInfo(en,ja,topic){
-  const ep=MODES[currentMode].endpoint;
-  try{
-    const qs=new URLSearchParams({country:ja,country_en:en,topic});
-    const r=await fetch(`${ep}?${qs.toString()}`);
-    if(r.ok){
-      const d=await r.json(); let note="";
-      if(!(d.articles&&d.articles.length)&&!d.overview) note=(d.reason==="error")?"取得でエラーが発生しました。時間をおいて再度お試しください。":"該当する情報が見つかりませんでした。別のテーマもお試しください。";
-      return { articles:d.articles||[], overview:d.overview||"", note };
-    }
-    return { articles:[], overview:"", note:"取得に失敗しました。少し待ってから再度お試しください。" };
-  }catch(_){ return { articles:[], overview:"", note:"サーバーに接続できません。npm start でサーバーを起動し http://localhost:3000 を開いてください。" }; }
-}
-async function loadInfoCard(card,feature){
-  const en=feature.properties.name, ja=jaName(en), topic=currentTopic();
-  const sub=`${MODES[currentMode].title.replace("世界地図","")}: ${topic}`;
-  card.innerHTML=headCard(ja,sub)+`<div class="card-loading">検索しています…</div>`;
-  bindClose(card);
-  const {articles,overview,note}=await fetchInfo(en,ja,topic);
-  let body="";
-  if(overview) body+=`<div class="ai-overview"><span class="ai-tag">${currentMode==="history"?"AIによる歴史概説":"AIによる概況"}（参考情報）</span><p>${escapeHtml(overview)}</p></div>`;
-  if(articles.length){
-    body+=`<ul class="news-list">${renderArticles(articles)}</ul>`;
-    if(articles.length>8) body+=`<button class="more-btn" data-more>もっと見る（残り${articles.length-8}件）</button>`;
-  }
-  if(note) body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(note)}</span></li></ul>`;
-  card.innerHTML=headCard(ja,sub)+body;
-  bindClose(card); bindMore(card);
-  requestAnimationFrame(()=>positionCard(card,feature));  // 内容確定後に位置を再計算（画面外防止）
-}
-function bindClose(card){ card.querySelector(".card-close").addEventListener("click",()=>closeCard(card._id)); }
-
-async function openInfoCard(feature){
-  if(!currentTopic()){ flashHint("上のプルダウンからテーマを選んでください。"); return; }
-  closeAllCards();                                   // 同時表示は1国のみ
-  const en=feature.properties.name, id="c"+(feature.id||en.replace(/\W/g,""));
-  const card=document.createElement("div"); card.className="info-card"; card._id=id;
-  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"info"});
-  positionCard(card,feature); card.style.zIndex="40";
-  await loadInfoCard(card,feature);
-}
-
-async function openCropCard(feature){
-  if(!cropData){ flashHint("先に作物を選んで「表示」してください（例: 米, 小麦, コーヒー）。"); return; }
-  closeAllCards();
-  const en=feature.properties.name, ja=jaName(en), id="crop_"+(feature.id||en.replace(/\W/g,""));
-  const card=document.createElement("div"); card.className="info-card"; card._id=id;
-  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"crop"});
-  positionCard(card,feature); card.style.zIndex="40";
-  const sub=`${cropData.ja}（${cropData.year}年）`;
-  card.innerHTML=headCard(ja,sub)+`<div class="card-loading">詳細を取得しています…</div>`;
-  bindClose(card);
-  let detail={};
-  try{ const qs=new URLSearchParams({crop:cropData.crop,country:en,country_ja:ja}); const r=await fetch(`${ENDPOINTS.cropDetail}?${qs.toString()}`); if(r.ok) detail=await r.json(); }catch(_){}
-  const prod=(detail.production!=null)?detail.production:cropData.data[en];
-  let body=`<div class="crop-detail">`;
-  if(prod!=null){ body+=`<div class="crop-stat"><span class="cs-num">${fmt(prod)}</span><span class="cs-unit">${escapeHtml(cropData.unit)}</span></div>`; if(detail.rank) body+=`<p class="crop-rank">収録国中 第${detail.rank}位 / ${detail.producers}か国中</p>`; }
-  else body+=`<p class="crop-none">この作物の収録データにこの国は含まれていません。</p>`;
-  if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（品種・産地など・参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
-  body+=`<p class="crop-src">${cropData.year}年・概算 <a href="#sources" class="src-link" data-go="sources">出典</a></p></div>`;
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card); bindSrcLink(card);
-  requestAnimationFrame(()=>positionCard(card,feature));
-}
-
-/* 特化型（温暖化等）のクリック詳細 */
-async function openThemeCard(feature){
-  if(!themeData){ flashHint("テーマ（温暖化など）を選んでください。"); return; }
-  closeAllCards();
-  const en=feature.properties.name, ja=jaName(en), id="theme_"+(feature.id||en.replace(/\W/g,""));
-  const card=document.createElement("div"); card.className="info-card"; card._id=id;
-  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"theme"});
-  positionCard(card,feature); card.style.zIndex="40";
-  const sub=`${themeData.ja}／${themeData.year}年`;
-  card.innerHTML=headCard(ja,sub)+`<div class="card-loading">詳細を取得しています…</div>`;
-  bindClose(card);
-
-  let detail={};
-  try{
-    const qs=new URLSearchParams({ metric:currentMetric, decade:themeData.year, country:en, country_ja:ja });
-    const r=await fetch(`${ENDPOINTS.themeDetail}?${qs.toString()}`);
-    if(r.ok) detail=await r.json();
-  }catch(_){}
-
-  const val=(detail.value!=null)?detail.value:themeData.data[en];
-  let body=`<div class="crop-detail">`;
-  if(val!=null){
-    body+=`<div class="crop-stat"><span class="cs-num">${fmt(val)}</span><span class="cs-unit">${escapeHtml(themeData.unit)}</span></div>`;
-    if(val<0) body+=`<p class="crop-rank">（マイナスは増加＝改善傾向）</p>`;
-    if(detail.rank) body+=`<p class="crop-rank">収録国中 第${detail.rank}位 / ${detail.producers}か国中（${themeData.year}年）</p>`;
-  }else{
-    body+=`<p class="crop-none">この指標の収録データにこの国は含まれていません。</p>`;
-  }
-  if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
-  body+=`<p class="crop-src">${escapeHtml(themeData.note||"")} <a href="#sources" class="src-link" data-go="sources">出典</a></p></div>`;
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card); bindSrcLink(card);
-  requestAnimationFrame(()=>positionCard(card,feature));
-}
-
-async function loadUser(){
-  try{
-    const r=await fetch("/api/user"); const d=await r.json();
-    if(!d.ok){ flashHint("ユーザーデータの取得に失敗しました。"); return; }
-    userData=d; recolorMap(); updateModeTitle();
-  }catch(_){ flashHint("サーバーに接続できません。npm start で起動してください。"); }
-}
-async function openUserCard(feature){
-  if(!userData){ flashHint("データを読み込み中です。"); return; }
-  closeAllCards();
-  const en=feature.properties.name, ja=jaName(en), id="user_"+(feature.id||en.replace(/\W/g,""));
-  const msgs=(userData.messages&&userData.messages[en])||[];
-  const card=document.createElement("div"); card.className="info-card"; card._id=id;
-  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"user"});
-  positionCard(card,feature); card.style.zIndex="40";
-  const sub=`利用者の声 ${msgs.length}件`;
-  let body="";
-  if(msgs.length){
-    body=`<ul class="news-list">`+msgs.map(m=>`<li><span class="news-dead">${escapeHtml(m)}</span></li>`).join("")+`</ul>`;
-  }else{
-    body=`<p class="crop-none" style="padding:14px">この国にはまだ声が登録されていません。</p>`;
-  }
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
-  requestAnimationFrame(()=>positionCard(card,feature));
-}
-
-async function loadTheme(metric, decade){
-  try{
-    const r=await fetch(`${ENDPOINTS.theme}?metric=${metric}&decade=${decade}`);
-    const d=await r.json();
-    if(!d.ok){ flashHint("データの取得に失敗しました。"); return; }
-    themeData=d; decadeLabel.textContent=`${d.year}年`;
-    recolorMap(); updateModeTitle();
-  }catch(_){ flashHint("サーバーに接続できません。npm start で起動してください。"); }
-}
-
-/* 画面外に出さない位置決め（内容の高さを測って上下左右をクランプ） */
-function positionCard(card,feature){
-  const b=path.bounds(feature);
-  const cardH=card.offsetHeight||260, cardW=card.offsetWidth||CARD_W;
-  let left=b[1][0]+GAP, top=b[0][1];
-  if(left+cardW>innerWidth-8) left=b[0][0]-cardW-GAP;   // 右にはみ出すなら左へ
-  left=Math.max(8, Math.min(left, innerWidth-cardW-8));
-  top =Math.max(70, Math.min(top,  innerHeight-cardH-8));
-  card.style.left=left+"px"; card.style.top=top+"px";
-}
-function repositionCards(){ openCards.forEach(({card,feature})=>positionCard(card,feature)); }
-function closeCard(id){ openCards.get(id)?.card.remove(); openCards.delete(id); }
-
-/* ========================================================= */
-/* 地図・テーマの選択とモーション                            */
-/* ========================================================= */
-const mapSelect=document.getElementById("mapSelect");
-const themeSelect=document.getElementById("themeSelect");
-const applyBtn=document.getElementById("applyBtn");
-const toastEl=document.getElementById("mapToast");
-const pulseEl=document.getElementById("mapPulse");
-const decadeControl=document.getElementById("decadeControl");
-const decadeSlider=document.getElementById("decadeSlider");
-const decadeLabel=document.getElementById("decadeLabel");
-const goalSelect=document.getElementById("goalSelect");
-const indicatorSelect=document.getElementById("indicatorSelect");
-let sdgGoals=null;   // 目標メタ（一度だけ取得）
-
-async function initSdgControls(){
-  if(!sdgGoals){
-    try{ const r=await fetch("/api/sdg/goals"); const d=await r.json(); sdgGoals=d.goals||[]; }
-    catch(_){ flashHint("SDGsデータの取得に失敗しました。サーバー起動を確認してください。"); return; }
-  }
-  goalSelect.innerHTML=sdgGoals.map(g=>`<option value="${g.id}">${g.id}. ${g.title}</option>`).join("");
-  goalSelect.selectedIndex=0;
-  populateIndicatorSelect();
-  loadSdg();
-}
-function populateIndicatorSelect(){
-  const g=sdgGoals.find(x=>String(x.id)===goalSelect.value)||sdgGoals[0];
-  indicatorSelect.innerHTML=g.indicators.map(i=>`<option value="${i.key}">${i.label}</option>`).join("");
-  indicatorSelect.selectedIndex=0;
-  indicatorSelect.hidden = (g.indicators.length<=1) ? false : false; // 常に表示（1つでも見せる）
-}
-async function loadSdg(){
-  playPulse(); closeAllCards();
-  try{
-    const r=await fetch(`/api/sdg?goal=${goalSelect.value}&indicator=${indicatorSelect.value}`);
-    const d=await r.json();
-    if(!d.ok){ flashHint("指標データが見つかりませんでした。"); return; }
-    sdgData=d; recolorMap(); updateModeTitle();
-    showToast(`目標${d.goalId}「${d.label}」で表示中`);
-  }catch(_){ flashHint("サーバーに接続できません。"); }
-}
-goalSelect.addEventListener("change", ()=>{ populateIndicatorSelect(); loadSdg(); });
-indicatorSelect.addEventListener("change", loadSdg);
-
-async function openSdgCard(feature){
-  if(!sdgData){ flashHint("目標と指標を選んでください。"); return; }
-  closeAllCards();
-  const en=feature.properties.name, ja=jaName(en), id="sdg_"+(feature.id||en.replace(/\W/g,""));
-  const card=document.createElement("div"); card.className="info-card"; card._id=id;
-  cardLayer.appendChild(card); openCards.set(id,{card,feature,kind:"sdg"});
-  positionCard(card,feature); card.style.zIndex="40";
-  const sub=`目標${sdgData.goalId} / ${sdgData.label}`;
-  card.innerHTML=headCard(ja,sub)+`<div class="card-loading">詳細を取得しています…</div>`; bindClose(card);
-  let detail={};
-  try{ const qs=new URLSearchParams({goal:sdgData.goalId,indicator:sdgData.key,country:en,country_ja:ja}); const r=await fetch(`/api/sdg-detail?${qs.toString()}`); if(r.ok) detail=await r.json(); }catch(_){}
-  const val=(detail.value!=null)?detail.value:sdgData.data[en];
-  let body=`<div class="crop-detail">`;
-  if(val!=null){
-    body+=`<div class="crop-stat"><span class="cs-num">${fmt(val)}</span><span class="cs-unit">${escapeHtml(sdgData.unit)}</span></div>`;
-    if(detail.rank) body+=`<p class="crop-rank">${sdgData.higherIsBetter?"良い順":"課題が小さい順"}で 第${detail.rank}位 / ${detail.producers}か国中</p>`;
-  }else body+=`<p class="crop-none">この指標の収録データにこの国は含まれていません。</p>`;
-  if(sdgData.target){ body+=`<p class="sdg-target">🎯 SDGs定量目標：${escapeHtml(sdgData.target)}</p>`; }
-  if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
-  body+=`<p class="crop-src">${escapeHtml(sdgData.goalTitle)} <a href="#sources" class="src-link" data-go="sources">出典</a></p></div>`;
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card); bindSrcLink(card);
-  requestAnimationFrame(()=>positionCard(card,feature));
-}
-
-// 地図選択プルダウンを一度だけ構築
-mapSelect.innerHTML=MAP_MODES.map(m=>`<option value="${m}">${MODES[m].title}</option>`).join("");
-mapSelect.addEventListener("change", ()=> showView(mapSelect.value));
-
-// 年代スライダー（特化型マップ）
-decadeSlider.addEventListener("input", ()=>{
-  decadeLabel.textContent=`${decadeSlider.value}年`;
-});
-decadeSlider.addEventListener("change", ()=>{
-  if(currentMode==="env" && currentMetric){
-    playPulse(); closeAllCards();
-    loadTheme(currentMetric, +decadeSlider.value);
-    showToast(`${decadeSlider.value}年で表示中`);
-  }
-});
-
-function applyTheme(){
-  const val=themeSelect.value;
-  if(!val){ flashHint(currentMode==="crops"?"作物を選んでください。":"テーマを選んでください。"); return; }
-  playPulse();
-  if(currentMode==="crops"){ searchCrop(val); }
-  else if(currentMode==="env"){
-    currentMetric = ENV_METRICS[val] || "warming";
-    loadTheme(currentMetric, +decadeSlider.value);
-    showToast(`「${val}」で表示中`);
-  }
-  else{
-    showToast(`「${val}」で表示中`);
-    openCards.forEach(({card,feature,kind})=>{ if(kind!=="crop") loadInfoCard(card,feature); });
-  }
-}
-applyBtn.addEventListener("click", applyTheme);
-themeSelect.addEventListener("change", applyTheme);
-
-function playPulse(){
-  pulseEl.classList.remove("go"); void pulseEl.offsetWidth; pulseEl.classList.add("go");
-}
-let toastTimer=null;
-function showToast(msg){
-  toastEl.textContent=msg; toastEl.hidden=false; toastEl.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>{ toastEl.classList.remove("show"); setTimeout(()=>toastEl.hidden=true,300); }, 2400);
-}
-let hintTimer=null;
-function flashHint(msg){
-  const el=document.getElementById("mapHint"); el.textContent=msg; el.classList.add("flash");
-  clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ el.classList.remove("flash"); el.textContent=MODES[currentMode].hint; },6000);
-}
-
-async function searchCrop(name){
-  try{
-    const r=await fetch(`${ENDPOINTS.crops}?crop=${encodeURIComponent(name)}`);
-    const d=await r.json();
-    if(!d.ok){ cropData=null; recolorMap(); updateModeTitle(); flashHint(`「${name}」は未収録です。収録作物: ${(d.available||[]).join("、 ")}`); return; }
-    cropData=d; recolorMap(); updateModeTitle();
-    showToast(`${d.ja} の収量で色分けしました`);
-  }catch(_){ flashHint("作物データの取得に失敗しました。サーバーが起動しているか確認してください。"); }
-}
-
-/* ========================================================= */
-/* 問い合わせ                                                */
-/* ========================================================= */
-const form=document.getElementById("contactForm"), note=document.getElementById("formNote");
-form.addEventListener("submit", async e=>{
-  e.preventDefault();
-  const data=new FormData(form);
-  const name=(data.get("name")||"").toString().trim(), email=(data.get("email")||"").toString().trim(), msg=(data.get("message")||"").toString().trim();
-  note.classList.remove("error");
-  if(!name||!email||!msg){ note.textContent="すべての項目を入力してください。"; note.classList.add("error"); return; }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ note.textContent="メールアドレスの形式をご確認ください。"; note.classList.add("error"); return; }
-  const btn=form.querySelector('button[type="submit"]'); btn.disabled=true; note.textContent="送信しています…";
-  try{
-    const res=await fetch(ENDPOINTS.contact,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,email,message:msg})});
-    const out=await res.json().catch(()=>({}));
-    if(res.ok&&out.ok){ form.reset(); note.textContent=out.mailed?"お問い合わせを送信しました。ありがとうございます。":"お問い合わせを受け付けました（サーバーに保存）。※メール送信は未設定のため配信されていません。"; }
-    else{ note.classList.add("error"); note.textContent=out.error||"送信に失敗しました。時間をおいて再度お試しください。"; }
-  }catch(_){ note.classList.add("error"); note.textContent="サーバーに接続できませんでした。npm start でサーバーを起動してください。"; }
-  finally{ btn.disabled=false; }
-});
-
-/* ========================================================= */
-/* 国名 英→日                                                */
-/* ========================================================= */
-function jaName(en){ return JA_COUNTRY[en]||en; }
-const JA_COUNTRY = {
-  "United States of America":"アメリカ合衆国","United States":"アメリカ合衆国","Russia":"ロシア","China":"中国","Japan":"日本","India":"インド",
-  "Germany":"ドイツ","France":"フランス","United Kingdom":"イギリス","Italy":"イタリア","Spain":"スペイン","Portugal":"ポルトガル",
-  "Netherlands":"オランダ","Belgium":"ベルギー","Switzerland":"スイス","Austria":"オーストリア","Poland":"ポーランド","Ukraine":"ウクライナ",
-  "Sweden":"スウェーデン","Norway":"ノルウェー","Finland":"フィンランド","Denmark":"デンマーク","Iceland":"アイスランド","Ireland":"アイルランド",
-  "Greece":"ギリシャ","Czechia":"チェコ","Romania":"ルーマニア","Hungary":"ハンガリー","Bulgaria":"ブルガリア","Serbia":"セルビア",
-  "Croatia":"クロアチア","Slovakia":"スロバキア","Slovenia":"スロベニア","Belarus":"ベラルーシ","Lithuania":"リトアニア","Latvia":"ラトビア",
-  "Estonia":"エストニア","Moldova":"モルドバ","Brazil":"ブラジル","Argentina":"アルゼンチン","Chile":"チリ","Peru":"ペルー",
-  "Colombia":"コロンビア","Venezuela":"ベネズエラ","Bolivia":"ボリビア","Ecuador":"エクアドル","Paraguay":"パラグアイ","Uruguay":"ウルグアイ",
-  "Mexico":"メキシコ","Cuba":"キューバ","Guatemala":"グアテマラ","Panama":"パナマ","Costa Rica":"コスタリカ","Honduras":"ホンジュラス",
-  "Nicaragua":"ニカラグア","Canada":"カナダ","Greenland":"グリーンランド","Australia":"オーストラリア","New Zealand":"ニュージーランド",
-  "Papua New Guinea":"パプアニューギニア","Indonesia":"インドネシア","Malaysia":"マレーシア","Philippines":"フィリピン","Thailand":"タイ",
-  "Vietnam":"ベトナム","Myanmar":"ミャンマー","Cambodia":"カンボジア","Laos":"ラオス","South Korea":"韓国","North Korea":"北朝鮮",
-  "Mongolia":"モンゴル","Taiwan":"台湾","Pakistan":"パキスタン","Bangladesh":"バングラデシュ","Afghanistan":"アフガニスタン","Nepal":"ネパール",
-  "Sri Lanka":"スリランカ","Bhutan":"ブータン","Kazakhstan":"カザフスタン","Uzbekistan":"ウズベキスタン","Turkmenistan":"トルクメニスタン",
-  "Kyrgyzstan":"キルギス","Tajikistan":"タジキスタン","Turkey":"トルコ","Iran":"イラン","Iraq":"イラク","Saudi Arabia":"サウジアラビア",
-  "United Arab Emirates":"アラブ首長国連邦","Israel":"イスラエル","Jordan":"ヨルダン","Syria":"シリア","Lebanon":"レバノン","Yemen":"イエメン",
-  "Oman":"オマーン","Qatar":"カタール","Kuwait":"クウェート","Georgia":"ジョージア","Armenia":"アルメニア","Azerbaijan":"アゼルバイジャン",
-  "Egypt":"エジプト","Libya":"リビア","Tunisia":"チュニジア","Algeria":"アルジェリア","Morocco":"モロッコ","Sudan":"スーダン","South Sudan":"南スーダン",
-  "Ethiopia":"エチオピア","Somalia":"ソマリア","Kenya":"ケニア","Tanzania":"タンザニア","Uganda":"ウガンダ","Nigeria":"ナイジェリア",
-  "Ghana":"ガーナ","Ivory Coast":"コートジボワール","Côte d'Ivoire":"コートジボワール","Cameroon":"カメルーン","Senegal":"セネガル",
-  "Mali":"マリ","Niger":"ニジェール","Chad":"チャド","Mauritania":"モーリタニア","Democratic Republic of the Congo":"コンゴ民主共和国",
-  "Dem. Rep. Congo":"コンゴ民主共和国","Republic of the Congo":"コンゴ共和国","Congo":"コンゴ共和国","Angola":"アンゴラ","Zambia":"ザンビア",
-  "Zimbabwe":"ジンバブエ","Mozambique":"モザンビーク","Madagascar":"マダガスカル","Namibia":"ナミビア","Botswana":"ボツワナ",
-  "South Africa":"南アフリカ","Rwanda":"ルワンダ","Burundi":"ブルンジ","Malawi":"マラウイ",
-};
-
-/* ========================================================= */
-/* 初期化：最初は必ずHOME                                    */
-/* ========================================================= */
-document.querySelectorAll("[data-go]").forEach(btn=>btn.addEventListener("click",()=>showView(btn.dataset.go)));
-history.replaceState(null,"","#home");
-showView("home");
+/* SDGsの定量目標 */
+.sdg-target{ margin:10px 0 0; padding:8px 10px; font-size:.82rem; line-height:1.5; color:#234634;
+  background:#eafaf0; border:1px solid #bfe9cf; border-radius:8px; }
