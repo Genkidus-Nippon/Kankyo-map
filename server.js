@@ -415,6 +415,12 @@ app.get("/api/news", async (req, res) => {
   let articles = [], overview = "", reason = "";
   try {
     articles = await gatherArticles(ja, en, topic);      // ① 信頼ソース優先で収集
+    // I-Map統合: 背景として日本語Wikipediaも少し添える
+    try {
+      const wiki = await fromWikipedia(ja, topic);
+      const seen = new Set(articles.map(a => a.url));
+      for (const w of wiki.slice(0, 2)) if (!seen.has(w.url)) articles.push(w);
+    } catch (_) {}
     articles = await translateTitles(articles);          // ③ 見出しを日本語化
     if (articles.length < 3) overview = await aiOverview(ja, topic);  // ② 少なければAI概況
     if (!articles.length && !overview) reason = "empty";
