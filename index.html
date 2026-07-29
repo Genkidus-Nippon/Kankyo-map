@@ -32,6 +32,7 @@
       <li><button class="nav-link" data-go="forest">森林減少世界地図</button></li>
       <li><button class="nav-link" data-go="water">水不足世界地図</button></li>
       <li><button class="nav-link" data-go="air">大気汚染世界地図</button></li>
+      <li><button class="nav-link" data-go="user">ユーザー世界地図</button></li>
       <li class="nav-div"></li>
       <li><button class="nav-link" data-go="about">I-MAPとは</button></li>
       <li><button class="nav-link" data-go="contact">問い合わせ</button></li>
@@ -71,6 +72,7 @@
           <button class="hero-card" data-go="forest"><span class="hc-emoji">🌲</span><span class="hc-title">森林減少</span></button>
           <button class="hero-card" data-go="water"><span class="hc-emoji">💧</span><span class="hc-title">水不足</span></button>
           <button class="hero-card" data-go="air"><span class="hc-emoji">🌫️</span><span class="hc-title">大気汚染</span></button>
+          <button class="hero-card" data-go="user"><span class="hc-emoji">🗣️</span><span class="hc-title">ユーザー</span></button>
         </div>
       </div>
     </div>
@@ -116,17 +118,33 @@
     <div class="panel">
       <p class="eyebrow">ABOUT</p>
       <h1>I-MAPとは</h1>
-      <p class="lead">世界地図の上から、さまざまな情報にアプローチするプラットフォームです。</p>
-      <p>「知りたいけれど、どこから調べればいいか分からない」。その最初のハードルを下げるために、情報を地図という直感的な入り口から届けます。現在は3つの地図を用意しています。</p>
+      <p class="lead">世界地図の上から、さまざまな情報に直感的にアプローチできる学びのプラットフォームです。</p>
+      <p>「知りたいけれど、どこから調べればいいか分からない」。その最初のハードルを下げるために、情報を地図という入り口から届けます。授業や探究学習で、生徒が自分の関心から世界を広げていくことを想定しています。地図は大きく3つのタイプに分かれます。</p>
+
+      <h2 style="font-family:var(--f-disp);margin:28px 0 6px;">① 調べる地図（テーマを選んで記事へ）</h2>
       <div class="how">
-        <div class="how-item"><span class="how-n">🌏</span><div><h3>環境世界地図</h3><p>テーマを入力し、国をダブルクリックすると、その国の環境ニュースが開きます。</p></div></div>
-        <div class="how-item"><span class="how-n">📜</span><div><h3>歴史世界地図</h3><p>歴史のテーマを入力し、国をダブルクリックすると、関係する歴史情報（Wikipedia）が開きます。</p></div></div>
-        <div class="how-item"><span class="how-n">🌾</span><div><h3>作物世界地図</h3><p>作物名を検索すると、収量の多い国が赤、少ない国が青に色分けされ、クリックで詳細が見られます。</p></div></div>
+        <div class="how-item"><span class="how-n">🌏</span><div><h3>環境世界地図</h3><p>テーマを選び、国をダブルクリックすると環境ニュースが開きます。</p></div></div>
+        <div class="how-item"><span class="how-n">🌐</span><div><h3>現社世界地図</h3><p>貧困・難民・紛争など現代社会のテーマから、各国のニュースへ。</p></div></div>
+        <div class="how-item"><span class="how-n">📜</span><div><h3>歴史世界地図</h3><p>歴史のテーマを選ぶと、関連する日本語Wikipedia記事が開きます。</p></div></div>
       </div>
+
+      <h2 style="font-family:var(--f-disp);margin:28px 0 6px;">② 色で比べる地図（データを可視化）</h2>
+      <div class="how">
+        <div class="how-item"><span class="how-n">🌾</span><div><h3>作物世界地図</h3><p>作物を選ぶと、収量の多い国が赤・少ない国が青に色分けされます。</p></div></div>
+        <div class="how-item"><span class="how-n">🎯</span><div><h3>SDGs世界地図</h3><p>17目標と指標を選ぶと、課題の大きい国が赤・良好な国が青に。50か国を収録。</p></div></div>
+        <div class="how-item"><span class="how-n">☀️</span><div><h3>温暖化・砂漠化・森林減少・水不足・大気汚染</h3><p>年代スライダー（1950〜2020）で、進行の移り変わりを追えます。</p></div></div>
+      </div>
+
+      <h2 style="font-family:var(--f-disp);margin:28px 0 6px;">③ 声を集める地図</h2>
+      <div class="how">
+        <div class="how-item"><span class="how-n">🗣️</span><div><h3>ユーザー世界地図</h3><p>利用者から寄せられた声を国ごとに集め、多い国ほど赤く表示。クリックで一覧が読めます。</p></div></div>
+      </div>
+
+      <p style="margin-top:22px;font-size:.86rem;color:var(--ink-soft);">※ 作物・SDGs・特化型マップの数値は、傾向を示す代表値（概算）です。厳密な最新統計ではありません。</p>
       <div class="about-cta">
         <button class="cta" data-go="env">環境をひらく</button>
-        <button class="cta ghost" data-go="history">歴史をひらく</button>
-        <button class="cta ghost" data-go="crops">作物をひらく</button>
+        <button class="cta ghost" data-go="sdg">SDGsをひらく</button>
+        <button class="cta ghost" data-go="warming">温暖化をひらく</button>
       </div>
     </div>
   </section>
