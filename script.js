@@ -9,38 +9,30 @@ const ENDPOINTS = {
   contact:"/api/contact",
 };
 
-/* 各モードの設定。テーマは「選択式」。crops は作物を選ぶ */
+/* 最終構成: I-Map(記事統合) / 環境(データ) / 作物 / SDGs（＋ユーザー） */
 const MODES = {
-  env:     { title:"環境世界地図", type:"info", endpoint:ENDPOINTS.news,
-             hint:"テーマを選んで表示、国をダブルクリックで関連ニュースが開きます。" },
-  society: { title:"現社世界地図", type:"info", endpoint:ENDPOINTS.news,
-             hint:"現代社会のテーマを選んで表示、国をダブルクリックで関連ニュースが開きます。" },
-  history: { title:"歴史世界地図", type:"info", endpoint:ENDPOINTS.history,
-             hint:"歴史のテーマを選んで表示、国をダブルクリックで関連情報が開きます。" },
+  imap:    { title:"I-Map", type:"info", endpoint:ENDPOINTS.news,
+             hint:"テーマを選び、国をダブルクリックすると関連する記事・情報が開きます。" },
+  env:     { title:"環境世界地図", type:"envdata",
+             hint:"テーマ（温暖化など）と年代を選ぶと、進行度が色で分かります。国クリックで詳細。" },
   crops:   { title:"作物世界地図", type:"crops", endpoint:ENDPOINTS.crops,
              hint:"作物を選んで表示。収量で色が変わり、国をダブルクリックで詳細が出ます。" },
   sdg:     { title:"SDGs世界地図", type:"sdg",
-             hint:"目標と指標を選ぶと、課題の大きい国が赤・良好な国が青で表示されます。国クリックで詳細。" },
+             hint:"目標と指標を選ぶと、達成状況が色で分かります。国クリックで詳細（定量目標つき）。" },
   user:    { title:"ユーザー世界地図", type:"user",
              hint:"利用者の声が多い国ほど赤。国をダブルクリックで声の一覧が見られます。" },
-  warming: { title:"温暖化世界地図", type:"theme", metric:"warming",
-             hint:"年代スライダーを動かすと、気温上昇の分布が変わります。国クリックで詳細。" },
-  desert:  { title:"砂漠化世界地図", type:"theme", metric:"desert",
-             hint:"年代スライダーを動かすと、乾燥地の割合の分布が変わります。国クリックで詳細。" },
-  forest:  { title:"森林減少世界地図", type:"theme", metric:"forest",
-             hint:"年代スライダーを動かすと、森林減少の分布が変わります。国クリックで詳細。" },
-  water:   { title:"水不足世界地図", type:"theme", metric:"water",
-             hint:"年代スライダーを動かすと、水ストレスの分布が変わります。国クリックで詳細。" },
-  air:     { title:"大気汚染世界地図", type:"theme", metric:"air",
-             hint:"年代スライダーを動かすと、PM2.5の分布が変わります。国クリックで詳細。" },
 };
-const MAP_MODES = ["env","society","history","crops","sdg","user","warming","desert","forest","water","air"];
+const MAP_MODES = ["imap","env","crops","sdg","user"];
+const HOME_MAPS = ["imap","env","crops","sdg"];   // HOMEに並べる4つ
 
-/* 選択肢（テーマはこちらで提供。ここに追記すれば増やせます） */
+const ENV_METRICS = { "温暖化":"warming","砂漠化":"desert","森林減少":"forest","水不足":"water","大気汚染":"air" };
+let currentMetric = null;
+
+/* 選択肢（テーマはこちらで提供） */
 const THEMES = {
-  env:     ["温暖化","気候変動","森林破壊","大気汚染","海洋プラスチック","生物多様性","水資源","再生可能エネルギー","干ばつ","山火事"],
-  society: ["貧困","難民・移民","紛争・戦争","ジェンダー平等","教育格差","人口問題","感染症","食料危機","経済格差","人権"],
-  history: ["革命","独立","産業革命","戦争","植民地","宗教改革","王朝","移民","冷戦","古代文明"],
+  imap: ["温暖化","気候変動","森林破壊","大気汚染","海洋プラスチック","生物多様性","水資源","再生可能エネルギー",
+         "貧困","難民・移民","紛争・戦争","ジェンダー平等","教育","感染症","食料危機","経済格差","人権","災害","人口問題"],
+  env:  ["温暖化","砂漠化","森林減少","水不足","大気汚染"],   // env はメトリクスを選ぶ
 };
 const CROP_OPTIONS = ["米","小麦","とうもろこし","大豆","コーヒー","じゃがいも"];
 
@@ -60,6 +52,7 @@ function topicToEn(t){ return TOPIC_EN[(t||"").trim()] || (t||"").trim() || "env
 const views = {
   home:document.getElementById("view-home"), map:document.getElementById("view-map"),
   about:document.getElementById("view-about"), contact:document.getElementById("view-contact"),
+  sources:document.getElementById("view-sources"),
 };
 let mapReady=false, currentMode="env";
 
@@ -88,9 +81,10 @@ function applyMode(){
   mapSelect.value = currentMode;
   setControls(m.type);
   document.getElementById("mapHint").textContent = m.hint;
-  cropData=null; themeData=null; sdgData=null; userData=null;   // 遷移時に色分けをリセット
-  if (m.type === "theme"){
-    loadTheme(+decadeSlider.value);
+  cropData=null; themeData=null; sdgData=null; userData=null; currentMetric=null;
+  if (m.type === "envdata"){
+    populateThemeSelect();          // メトリクス（温暖化等）を選ぶ
+    updateModeTitle(); recolorMap();
   } else if (m.type === "sdg"){
     initSdgControls();
   } else if (m.type === "user"){
@@ -102,16 +96,16 @@ function applyMode(){
   }
 }
 function setControls(type){
-  themeSelect.hidden   = !(type==="info" || type==="crops");
+  themeSelect.hidden   = !(type==="info" || type==="crops" || type==="envdata");
   applyBtn.hidden      = !(type==="info" || type==="crops");
-  decadeControl.hidden = (type!=="theme");
+  decadeControl.hidden = (type!=="envdata");
   goalSelect.hidden     = (type!=="sdg");
   indicatorSelect.hidden= (type!=="sdg");
 }
 function populateThemeSelect(){
   const isCrop = (currentMode==="crops");
   const opts = isCrop ? CROP_OPTIONS : THEMES[currentMode];
-  const ph = isCrop ? "作物を選ぼう" : "テーマを設定しよう";
+  const ph = isCrop ? "作物を選ぼう" : (currentMode==="env" ? "テーマを選ぼう（温暖化など）" : "テーマを設定しよう");
   themeSelect.innerHTML = `<option value="" disabled selected>${ph}</option>`
     + opts.map(o => `<option value="${o}">${o}</option>`).join("");
 }
@@ -123,8 +117,8 @@ function updateModeTitle(){
     el.textContent = `目標${sdgData.goalId}：${sdgData.goalTitle} ／ ${sdgData.label}`;
   } else if (currentMode==="user"){
     el.textContent = "ユーザー世界地図";
-  } else if (m.type==="theme" && themeData){
-    el.textContent = `${m.title}：${themeData.year}年（${themeData.unit}・${themeData.source}）`;
+  } else if (currentMode==="env" && themeData){
+    el.textContent = `環境世界地図：${themeData.ja}／${themeData.year}年`;
   } else {
     el.textContent = m.title;
   }
@@ -166,7 +160,7 @@ function activeChoro(){
   if (currentMode==="crops") return cropData;
   if (currentMode==="sdg") return sdgData;
   if (currentMode==="user") return userData;
-  if (MODES[currentMode].type==="theme") return themeData;
+  if (MODES[currentMode].type==="envdata") return themeData;
   return null;
 }
 
@@ -231,7 +225,7 @@ function resetHover(){ if(hoveredNode){ restCountry(hoveredNode); hoveredNode=nu
 function onCountryDblClick(feature){
   const type = MODES[currentMode].type;
   if (type==="crops") openCropCard(feature);
-  else if (type==="theme") openThemeCard(feature);
+  else if (type==="envdata") openThemeCard(feature);
   else if (type==="sdg") openSdgCard(feature);
   else if (type==="user") openUserCard(feature);
   else openInfoCard(feature);
@@ -284,6 +278,11 @@ function bindMore(card){
     card.querySelectorAll(".news-list li[hidden]").forEach(li=>li.removeAttribute("hidden"));
     btn.remove();
     requestAnimationFrame(()=>{ const e=openCards.get(card._id); if(e) positionCard(card,e.feature); });
+  });
+}
+function bindSrcLink(card){
+  card.querySelectorAll(".src-link[data-go]").forEach(a=>{
+    a.addEventListener("click", e=>{ e.preventDefault(); showView("sources"); });
   });
 }
 async function fetchInfo(en,ja,topic){
@@ -345,14 +344,14 @@ async function openCropCard(feature){
   if(prod!=null){ body+=`<div class="crop-stat"><span class="cs-num">${fmt(prod)}</span><span class="cs-unit">${escapeHtml(cropData.unit)}</span></div>`; if(detail.rank) body+=`<p class="crop-rank">収録国中 第${detail.rank}位 / ${detail.producers}か国中</p>`; }
   else body+=`<p class="crop-none">この作物の収録データにこの国は含まれていません。</p>`;
   if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（品種・産地など・参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
-  body+=`<p class="crop-src">出典: ${escapeHtml(cropData.source)}（${cropData.year}年・概算）</p></div>`;
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
+  body+=`<p class="crop-src">${cropData.year}年・概算 <a href="#sources" class="src-link" data-go="sources">出典</a></p></div>`;
+  card.innerHTML=headCard(ja,sub)+body; bindClose(card); bindSrcLink(card);
   requestAnimationFrame(()=>positionCard(card,feature));
 }
 
 /* 特化型（温暖化等）のクリック詳細 */
 async function openThemeCard(feature){
-  if(!themeData){ flashHint("年代スライダーを動かして表示してください。"); return; }
+  if(!themeData){ flashHint("テーマ（温暖化など）を選んでください。"); return; }
   closeAllCards();
   const en=feature.properties.name, ja=jaName(en), id="theme_"+(feature.id||en.replace(/\W/g,""));
   const card=document.createElement("div"); card.className="info-card"; card._id=id;
@@ -364,7 +363,7 @@ async function openThemeCard(feature){
 
   let detail={};
   try{
-    const qs=new URLSearchParams({ metric:MODES[currentMode].metric, decade:themeData.year, country:en, country_ja:ja });
+    const qs=new URLSearchParams({ metric:currentMetric, decade:themeData.year, country:en, country_ja:ja });
     const r=await fetch(`${ENDPOINTS.themeDetail}?${qs.toString()}`);
     if(r.ok) detail=await r.json();
   }catch(_){}
@@ -379,8 +378,8 @@ async function openThemeCard(feature){
     body+=`<p class="crop-none">この指標の収録データにこの国は含まれていません。</p>`;
   }
   if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
-  body+=`<p class="crop-src">${escapeHtml(themeData.note||"")}<br>出典: ${escapeHtml(themeData.source)}（代表値）</p></div>`;
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
+  body+=`<p class="crop-src">${escapeHtml(themeData.note||"")} <a href="#sources" class="src-link" data-go="sources">出典</a></p></div>`;
+  card.innerHTML=headCard(ja,sub)+body; bindClose(card); bindSrcLink(card);
   requestAnimationFrame(()=>positionCard(card,feature));
 }
 
@@ -410,8 +409,7 @@ async function openUserCard(feature){
   requestAnimationFrame(()=>positionCard(card,feature));
 }
 
-async function loadTheme(decade){
-  const metric = MODES[currentMode].metric;
+async function loadTheme(metric, decade){
   try{
     const r=await fetch(`${ENDPOINTS.theme}?metric=${metric}&decade=${decade}`);
     const d=await r.json();
@@ -495,9 +493,10 @@ async function openSdgCard(feature){
     body+=`<div class="crop-stat"><span class="cs-num">${fmt(val)}</span><span class="cs-unit">${escapeHtml(sdgData.unit)}</span></div>`;
     if(detail.rank) body+=`<p class="crop-rank">${sdgData.higherIsBetter?"良い順":"課題が小さい順"}で 第${detail.rank}位 / ${detail.producers}か国中</p>`;
   }else body+=`<p class="crop-none">この指標の収録データにこの国は含まれていません。</p>`;
+  if(sdgData.target){ body+=`<p class="sdg-target">🎯 SDGs定量目標：${escapeHtml(sdgData.target)}</p>`; }
   if(detail.ai) body+=`<div class="ai-overview"><span class="ai-tag">AIによる補足（参考情報）</span><p>${escapeHtml(detail.ai)}</p></div>`;
-  body+=`<p class="crop-src">${escapeHtml(sdgData.goalTitle)}／出典: ${escapeHtml(sdgData.source)}</p></div>`;
-  card.innerHTML=headCard(ja,sub)+body; bindClose(card);
+  body+=`<p class="crop-src">${escapeHtml(sdgData.goalTitle)} <a href="#sources" class="src-link" data-go="sources">出典</a></p></div>`;
+  card.innerHTML=headCard(ja,sub)+body; bindClose(card); bindSrcLink(card);
   requestAnimationFrame(()=>positionCard(card,feature));
 }
 
@@ -510,9 +509,11 @@ decadeSlider.addEventListener("input", ()=>{
   decadeLabel.textContent=`${decadeSlider.value}年`;
 });
 decadeSlider.addEventListener("change", ()=>{
-  playPulse(); closeAllCards();
-  loadTheme(+decadeSlider.value);
-  showToast(`${decadeSlider.value}年で表示中`);
+  if(currentMode==="env" && currentMetric){
+    playPulse(); closeAllCards();
+    loadTheme(currentMetric, +decadeSlider.value);
+    showToast(`${decadeSlider.value}年で表示中`);
+  }
 });
 
 function applyTheme(){
@@ -520,6 +521,11 @@ function applyTheme(){
   if(!val){ flashHint(currentMode==="crops"?"作物を選んでください。":"テーマを選んでください。"); return; }
   playPulse();
   if(currentMode==="crops"){ searchCrop(val); }
+  else if(currentMode==="env"){
+    currentMetric = ENV_METRICS[val] || "warming";
+    loadTheme(currentMetric, +decadeSlider.value);
+    showToast(`「${val}」で表示中`);
+  }
   else{
     showToast(`「${val}」で表示中`);
     openCards.forEach(({card,feature,kind})=>{ if(kind!=="crop") loadInfoCard(card,feature); });
