@@ -284,3 +284,25 @@ body.menu-open .nav-menu{ transform:translateX(0); }
 }
 .free-search:focus{ outline:2px solid var(--brand); outline-offset:1px; }
 @media (max-width:720px){ .free-search{ min-width:0; flex:1 1 100%; } }
+
+/* =========================================================
+   追加: 出典の説明文・モバイルの操作パネル小型化・ズーム
+   ========================================================= */
+.src-desc{ margin:0 0 10px; font-size:.86rem; line-height:1.7; color:var(--ink-soft); }
+
+/* ズーム操作のヒント */
+.world-map{ touch-action:none; }  /* ピンチズームを地図側で扱う */
+
+/* モバイルでは操作パネルを小さく */
+@media (max-width:720px){
+  .map-controls{ top:10px; left:10px; right:10px; gap:6px; }
+  .ctrl-select{ font-size:.78rem; padding:7px 26px 7px 10px; border-radius:9px; }
+  .search-btn{ font-size:.78rem; padding:7px 12px; border-radius:9px; }
+  .free-search{ font-size:.78rem; padding:7px 10px; border-radius:9px; }
+  .decade-control{ padding:6px 10px; gap:6px; border-radius:9px; }
+  .decade-control input[type="range"]{ width:88px; }
+  .decade-label{ font-size:.78rem; min-width:46px; }
+  .map-mode-title{ top:auto; bottom:56px; left:10px; font-size:.8rem; padding:4px 9px; }
+  .map-hint{ left:10px; right:10px; bottom:10px; font-size:.72rem; padding:7px 10px; max-width:none; }
+  .info-card{ width:min(92vw,320px); max-height:60vh; }
+}
