@@ -84,6 +84,54 @@ const METRICS = {
       "Canada":8,"Australia":8,
     },
   },
+
+  co2: {
+    ja:"一人当たりCO2排出", unit:"t/人",
+    source:"代表値モデル（Global Carbon Project等の傾向に基づく概算）",
+    note:"一人当たり年間CO2排出量の概算（工業化にともなう上昇傾向を反映）",
+    lowLabel:"少ない", highLabel:"多い",
+    model:(a,t)=> +(a*(0.35+0.65*t)).toFixed(1),
+    anchor:{
+      "Qatar":35,"Saudi Arabia":18,"Australia":15,"Canada":15,"United States of America":14,
+      "South Korea":12,"Russia":11,"Kazakhstan":14,"Japan":8,"China":8,"Germany":8,"Poland":8,
+      "South Africa":7,"Iran":8,"United Kingdom":5,"Italy":5,"France":4.5,"Spain":5,"Turkey":5,
+      "Mexico":3.7,"Vietnam":3.5,"Thailand":3.8,"Argentina":4,"Brazil":2.2,"Indonesia":2.3,
+      "Egypt":2.3,"India":2,"Pakistan":1,"Nigeria":0.6,"Bangladesh":0.6,"Kenya":0.4,"Ethiopia":0.15,
+      "Ukraine":4,"Netherlands":8,"Norway":7,
+    },
+  },
+
+  sea: {
+    ja:"海面上昇（沿岸影響）", unit:"cm",
+    source:"代表値モデル（IPCC/NASA等の傾向に基づく概算）",
+    note:"1950年比の海面上昇の概算（沿岸国ほど影響が大きい傾向）",
+    lowLabel:"小さい", highLabel:"大きい",
+    model:(a,t)=> +(a*t).toFixed(1),
+    anchor:{
+      "Bangladesh":28,"Vietnam":26,"Indonesia":25,"Philippines":25,"Thailand":24,"India":22,
+      "Japan":20,"China":20,"United States of America":20,"Netherlands":24,"Egypt":23,"Nigeria":22,
+      "Maldives":30,"Myanmar":26,"Malaysia":22,"Brazil":18,"Mexico":19,"United Kingdom":18,
+      "France":17,"Italy":18,"Australia":19,"South Korea":20,"Pakistan":22,"Iraq":20,
+      "Saudi Arabia":18,"South Africa":17,"Argentina":16,"Chile":16,"Peru":16,"Senegal":20,
+      "Ghana":20,"Tanzania":21,"Mozambique":22,"Colombia":18,
+    },
+  },
+
+  biodiv: {
+    ja:"生物多様性の損失", unit:"指数(0-100)",
+    source:"代表値モデル（IUCN/生物多様性指標の傾向に基づく概算）",
+    note:"生態系・種の損失度の概算指数（高いほど損失が大きい）",
+    lowLabel:"小さい", highLabel:"大きい",
+    model:(a,t)=> +(a*(0.4+0.6*t)).toFixed(0),
+    anchor:{
+      "Madagascar":80,"Indonesia":72,"Philippines":75,"Brazil":60,"Malaysia":68,"India":65,
+      "China":62,"Nigeria":70,"Democratic Republic of the Congo":55,"Myanmar":60,"Thailand":58,
+      "Mexico":58,"Colombia":52,"Peru":48,"Vietnam":62,"Ethiopia":55,"Kenya":50,"Tanzania":50,
+      "Australia":55,"United States of America":45,"Argentina":45,"South Africa":50,"Cameroon":58,
+      "Ghana":60,"Ivory Coast":66,"Japan":45,"Germany":40,"France":42,"United Kingdom":45,
+      "Spain":42,"Italy":44,"Russia":35,"Canada":30,"Papua New Guinea":40,
+    },
+  },
 };
 
 // 固定色スケール（2020時点=t:1 の最大値）。全年代でこれを分母に使う。
