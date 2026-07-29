@@ -23,6 +23,7 @@
     <ul>
       <li><button class="nav-link" data-go="home">HOME</button></li>
       <li><button class="nav-link" data-go="imap">I-Map</button></li>
+      <li><button class="nav-link" data-go="aimap">AI-Map</button></li>
       <li><button class="nav-link" data-go="env">環境世界地図</button></li>
       <li><button class="nav-link" data-go="crops">作物世界地図</button></li>
       <li><button class="nav-link" data-go="sdg">SDGs世界地図</button></li>
@@ -58,6 +59,7 @@
         <p class="hero-lead">世界の「いま」を、地図から。見たいテーマを選んでください。</p>
         <div class="hero-grid">
           <button class="hero-card" data-go="imap"><span class="hc-emoji">🔎</span><span class="hc-title">I-Map</span><span class="hc-desc">テーマから記事へ</span></button>
+          <button class="hero-card" data-go="aimap"><span class="hc-emoji">🤖</span><span class="hc-title">AI-Map</span><span class="hc-desc">AIが解説記事を生成</span></button>
           <button class="hero-card" data-go="env"><span class="hc-emoji">🌏</span><span class="hc-title">環境世界地図</span><span class="hc-desc">温暖化など・年代で色分け</span></button>
           <button class="hero-card" data-go="crops"><span class="hc-emoji">🌾</span><span class="hc-title">作物世界地図</span><span class="hc-desc">収量を色分け</span></button>
           <button class="hero-card" data-go="sdg"><span class="hc-emoji">🎯</span><span class="hc-title">SDGs世界地図</span><span class="hc-desc">目標の達成状況</span></button>
@@ -119,21 +121,27 @@
     <div class="panel">
       <p class="eyebrow">ABOUT</p>
       <h1>Imapsとは</h1>
-      <p class="lead">「世界のいまを、地図から。」Imapsを運営するプロジェクトです。</p>
-      <p>Imapsは、世界地図の上からさまざまな情報に直感的にアプローチできる学びのプラットフォームです。グローバル向けには無料で公開し、あわせて、Imapsを授業や探究学習で活かすための教材・プログラムを教育機関向けにご提供していく構想です。現在は4つの地図があります。</p>
+      <p class="lead">「世界のいまを、地図から。」世界地図の上からさまざまな情報に直感的にアプローチできる学びのプラットフォームです。</p>
+      <p>グローバル向けには無料で公開し、あわせてImapsを授業や探究学習で活かすための教材・プログラムを教育機関向けに提供していく構想です。現在は次の地図があります。</p>
       <div class="how">
-        <div class="how-item"><span class="how-n">🔎</span><div><h3>I-Map</h3><p>気になるテーマを選び、国をダブルクリックすると関連する記事・背景情報が開きます。</p></div></div>
-        <div class="how-item"><span class="how-n">🌏</span><div><h3>環境世界地図</h3><p>温暖化・砂漠化・森林減少・水不足・大気汚染をテーマに選び、年代スライダーで進行を色分け表示。</p></div></div>
-        <div class="how-item"><span class="how-n">🌾</span><div><h3>作物世界地図</h3><p>作物の収量を国ごとに色分け。多い国が赤、少ない国が青。</p></div></div>
-        <div class="how-item"><span class="how-n">🎯</span><div><h3>SDGs世界地図</h3><p>17目標と指標を選び、定量目標に対する達成状況を色分け表示。50か国を収録。</p></div></div>
+        <div class="how-item"><span class="how-n">🔎</span><div><h3>I-Map</h3><p>分野と小テーマを選び、国をダブルクリックすると関連する記事・背景情報が開きます。自由検索も可能です。</p></div></div>
+        <div class="how-item"><span class="how-n">🤖</span><div><h3>AI-Map</h3><p>Web記事の代わりに、AIがその国×テーマの解説記事を生成します（AI生成・参考情報）。</p></div></div>
+        <div class="how-item"><span class="how-n">🌏</span><div><h3>環境世界地図</h3><p>温暖化・砂漠化など8つの指標をテーマに選び、年代スライダーで進行を色分け表示します。</p></div></div>
+        <div class="how-item"><span class="how-n">🌾</span><div><h3>作物世界地図</h3><p>作物の収量を国ごとに色分け。多い国が赤、少ない国が青です。</p></div></div>
+        <div class="how-item"><span class="how-n">🎯</span><div><h3>SDGs世界地図</h3><p>17目標と指標を選び、定量目標に対する達成状況を色分け表示します。</p></div></div>
+        <div class="how-item"><span class="how-n">🗣️</span><div><h3>ユーザー世界地図</h3><p>利用者から寄せられた声を国ごとに集め、多い国ほど赤く表示します。</p></div></div>
       </div>
-      <p style="margin-top:22px;font-size:.86rem;color:var(--ink-soft);">※ データ型の地図の数値は代表値（概算）です。詳しい出典は「出典」ページをご覧ください。</p>
+      <p style="margin-top:22px;font-size:.86rem;color:var(--ink-soft);">※ データ型の地図の数値は代表値（概算）です。詳しい情報は「出典」ページをご覧ください。</p>
 
       <div class="sponsor-slot"><span class="sponsor-label">SPONSORED</span><p>この枠にスポンサー・アフィリエイトを掲載できます。</p></div>
 
       <div class="about-cta">
-        <button class="cta" data-go="imap">I-Mapをひらく</button>
-        <button class="cta ghost" data-go="sdg">SDGsをひらく</button>
+        <button class="cta ghost" data-go="imap">I-Map</button>
+        <button class="cta ghost" data-go="aimap">AI-Map</button>
+        <button class="cta ghost" data-go="env">環境世界地図</button>
+        <button class="cta ghost" data-go="crops">作物世界地図</button>
+        <button class="cta ghost" data-go="sdg">SDGs世界地図</button>
+        <button class="cta ghost" data-go="user">ユーザー世界地図</button>
       </div>
     </div>
     <footer class="site-footer"><p class="copyright">©Genkidus</p></footer>
@@ -168,33 +176,33 @@
         <div class="src-item"><h3>環境世界地図（温暖化・砂漠化・森林減少・水不足・大気汚染・CO2・海面上昇・生物多様性）</h3>
           <p class="src-desc">各国の進行度は、下記機関が公表する統計・評価報告の傾向をもとにした<strong>代表値モデル（概算）</strong>です。年代（1950〜2020）は各指標の一般的な推移傾向にもとづき内挿しています。厳密な観測値ではありません。</p>
           <ul>
-            <li><a href="https://www.ipcc.ch/" target="_blank" rel="noopener">IPCC</a> ／ <a href="https://www.ncei.noaa.gov/" target="_blank" rel="noopener">NOAA NCEI</a> … 気温上昇・海面上昇の評価</li>
-            <li><a href="https://www.unep.org/" target="_blank" rel="noopener">UNEP</a> … 乾燥地・砂漠化の区分</li>
-            <li><a href="https://www.fao.org/forest-resources-assessment/" target="_blank" rel="noopener">FAO 森林資源評価(FRA)</a> … 森林面積の変化</li>
-            <li><a href="https://www.wri.org/aqueduct" target="_blank" rel="noopener">WRI Aqueduct</a> … 水ストレス指標</li>
-            <li><a href="https://www.who.int/data/gho" target="_blank" rel="noopener">WHO GHO</a> ／ <a href="https://www.iqair.com/" target="_blank" rel="noopener">IQAir</a> … PM2.5濃度</li>
-            <li><a href="https://www.globalcarbonproject.org/" target="_blank" rel="noopener">Global Carbon Project</a> … 一人当たりCO2排出</li>
-            <li><a href="https://www.iucnredlist.org/" target="_blank" rel="noopener">IUCN レッドリスト</a> … 生物多様性の損失</li>
+            <li><strong>IPCC</strong> ／ <strong>NOAA NCEI</strong> … 気温上昇・海面上昇の評価</li>
+            <li><strong>UNEP</strong> … 乾燥地・砂漠化の区分</li>
+            <li><strong>FAO 森林資源評価(FRA)</strong> … 森林面積の変化</li>
+            <li><strong>WRI Aqueduct</strong> … 水ストレス指標</li>
+            <li><strong>WHO GHO</strong> ／ <strong>IQAir</strong> … PM2.5濃度</li>
+            <li><strong>Global Carbon Project</strong> … 一人当たりCO2排出</li>
+            <li><strong>IUCN レッドリスト</strong> … 生物多様性の損失</li>
           </ul>
         </div>
         <div class="src-item"><h3>作物世界地図</h3>
           <p class="src-desc">主要生産国の生産量（百万トン）を、FAOの生産統計にもとづく概算で収録しています（年次はおおむね2022年）。収録国は主要国に限定しており、網羅ではありません。</p>
-          <ul><li><a href="https://www.fao.org/faostat/" target="_blank" rel="noopener">FAOSTAT（FAO統計データベース）</a> … 作物生産量</li></ul>
+          <ul><li><strong>FAOSTAT（FAO統計データベース）</strong> … 作物生産量</li></ul>
         </div>
         <div class="src-item"><h3>SDGs世界地図</h3>
           <p class="src-desc">各目標の指標値（貧困率・平均寿命・識字率・PM2.5・CO2など）を、国際機関の統計の傾向にもとづく代表値で収録し、50か国を対象にしています。カードには各目標の定量的なターゲットも表示します。</p>
           <ul>
-            <li><a href="https://unstats.un.org/sdgs/" target="_blank" rel="noopener">UN SDG Indicators Database</a> … SDGs公式指標・ターゲット</li>
-            <li><a href="https://data.worldbank.org/" target="_blank" rel="noopener">World Bank Open Data</a> … 社会・経済指標</li>
-            <li><a href="https://ourworldindata.org/" target="_blank" rel="noopener">Our World in Data</a> … データ可視化の参考</li>
+            <li><strong>UN SDG Indicators Database</strong> … SDGs公式指標・ターゲット</li>
+            <li><strong>World Bank Open Data</strong> … 社会・経済指標</li>
+            <li><strong>Our World in Data</strong> … データ可視化の参考</li>
           </ul>
         </div>
         <div class="src-item"><h3>I-Map（記事・背景情報）</h3>
           <p class="src-desc">選んだテーマと国に関するニュース記事を検索して表示します。記事の内容と正確性はリンク先の各報道機関に帰属します。あわせて背景として日本語版Wikipediaの関連項目を添えることがあります。翻訳にはDeepLまたはAIを用います（設定時）。</p>
           <ul>
-            <li>ニュース: 各報道機関（<a href="https://currentsapi.services/" target="_blank" rel="noopener">Currents API</a> ／ <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> 経由）</li>
-            <li>背景: <a href="https://ja.wikipedia.org/" target="_blank" rel="noopener">Wikipedia（日本語版）</a></li>
-            <li>翻訳: <a href="https://www.deepl.com/" target="_blank" rel="noopener">DeepL</a> ／ AI</li>
+            <li>ニュース: 各報道機関（<strong>Currents API</strong> ／ <strong>GDELT</strong> 経由）</li>
+            <li>背景: <strong>Wikipedia（日本語版）</strong></li>
+            <li>翻訳: <strong>DeepL</strong> ／ AI</li>
           </ul>
         </div>
       </div>
