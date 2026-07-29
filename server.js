@@ -672,6 +672,38 @@ app.get("/api/sdg-detail", async (req, res) => {
              producers:entries.length, higherIsBetter:d.higherIsBetter, ai });
 });
 
+/* ========================================================= */
+/* AI-Map：AIが生成する解説記事（Web記事ではない・参考情報）  */
+/* ========================================================= */
+app.get("/api/ai-articles", async (req, res) => {
+  const ja    = (req.query.country || "").toString();
+  const en    = (req.query.country_en || ja).toString();
+  const topic = (req.query.topic || "").toString();
+  if (!ANTHROPIC) return res.json({ ok:false, reason:"no_ai", message:"AI-Mapの利用には ANTHROPIC_API_KEY が必要です。" });
+  if (!topic)     return res.json({ ok:false, reason:"no_topic" });
+
+  const key = `ai|${ja}|${topic}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
+
+  const out = await claudeText(
+    "あなたは教育向けの解説ライターです。事実にもとづく一般的な知識のみで、日本語の短い解説記事を書きます。具体的な統計数値・年月日・人物の発言・存在しない出典やURLは創作しないでください。断定を避け、わかりやすく中立に書きます。",
+    `「${ja}」の「${topic}」について、読者の興味を引く日本語の解説記事を、書ける範囲で2〜6本作成してください。話題が乏しい場合は少なめでかまいません。各記事は {\"title\":\"見出し\",\"body\":\"2〜3文の本文\"} とし、出力はJSONのみ：{\"articles\":[...]} 。前後の説明は書かないでください。`,
+    1400
+  );
+  let articles = [];
+  try {
+    const parsed = JSON.parse(out.replace(/```json|```/g, "").trim());
+    articles = Array.isArray(parsed.articles) ? parsed.articles
+             : (Array.isArray(parsed) ? parsed : []);
+    articles = articles.filter(a => a && a.title).slice(0, 6);
+  } catch (_) {}
+
+  const payload = { ok:true, articles, count:articles.length };
+  if (articles.length) cache.set(key, { t: Date.now(), data: payload });
+  res.json(payload);
+});
+
 app.listen(PORT, () => {
   console.log("========================================");
   console.log(`  環境世界地図が起動しました`);
