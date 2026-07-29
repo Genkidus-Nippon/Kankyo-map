@@ -253,23 +253,23 @@ async function currentsSearch(keywords, language){
   }));
 }
 
-// Currents をメインに（日本語→英語の順で試す）
+// Currents をメインに（関連性重視：日本語→英語で同じテーマを検索）
 async function fromCurrents(ja, en, topic){
   if (!process.env.CURRENTS_KEY) return [];
-  // 1) 日本語（国 × テーマ）
-  let arts = await currentsSearch(`${ja} ${topic}`, "ja");
-  // 2) 0件なら日本語で「国 × 環境」に広げる
-  if (!arts.length && topic !== "環境") arts = await currentsSearch(`${ja} 環境`, "ja");
-  // 3) それでも0件なら英語（国 × テーマ英訳）
-  if (!arts.length) arts = await currentsSearch(`${en} ${topicToEn(topic)}`, "en");
-  if (!arts.length) console.warn(`Currents: 「${ja} ${topic}」該当なし → GDELTを試します`);
-  return arts.slice(0, 12);
+  let arts = await currentsSearch(`${ja} ${topic}`, "ja");           // 国×テーマ（日本語）
+  if (arts.length < 4){
+    const enArts = await currentsSearch(`${en} ${topicToEn(topic)}`, "en");  // 国×テーマ（英語）で補完
+    const seen = new Set(arts.map(a => a.url));
+    for (const a of enArts) if (!seen.has(a.url)) arts.push(a);
+  }
+  if (!arts.length) console.warn(`Currents: 「${ja} ${topic}」該当なし → GDELTへ`);
+  return arts.slice(0, 16);
 }
 
 // --- GDELT: 429対策（直列化 + 最小間隔 + 1回リトライ）---
 let gdeltLock = Promise.resolve();
 let lastGdelt = 0;
-const GDELT_MIN = 2000;   // 呼び出し間隔を最低2秒あける
+const GDELT_MIN = 600;   // 呼び出し間隔（速度優先。429時は自動で待って再試行）
 
 async function gdeltOnce(en, topic){
   try {
@@ -338,20 +338,34 @@ function isTrusted(url){
 
 // Currents / GDELT を集めて重複除去し、信頼ソースを優先
 async function gatherArticles(ja, en, topic){
-  let arts = await fromCurrents(ja, en, topic);
-  if (arts.length < 6){
-    const g = await fromGDELT(en, topic);
-    arts = arts.concat(g.articles || []);
+  // Currents(関連性・日本語) と GDELT(英語) を並列取得
+  const [cur, gd] = await Promise.all([
+    fromCurrents(ja, en, topic).catch(() => []),
+    fromGDELT(en, topic).then(g => g.articles || []).catch(() => []),
+  ]);
+
+  const seen = new Set();
+  const dedupe = list => {
+    const out = [];
+    for (const a of list){ if (a && a.url && a.title && !seen.has(a.url)){ seen.add(a.url); out.push(a); } }
+    return out;
+  };
+  const curU = dedupe(cur);
+  const gdU  = dedupe(gd);
+  const gdTrusted = gdU.filter(a => isTrusted(a.url));
+  const gdRest    = gdU.filter(a => !isTrusted(a.url));
+
+  // 関連性の高いCurrentsを先頭 → 信頼できるGDELT → 残り
+  let ordered = [...curU, ...gdTrusted, ...gdRest];
+
+  // 少なすぎる国は、国名＋環境の広い条件でGDELT補完
+  if (ordered.length < 8){
+    let broadArts = [];
+    try { const g = await fromGDELT(en, "environment OR climate OR pollution OR wildlife"); broadArts = g.articles || []; }
+    catch (_) {}
+    ordered = ordered.concat(dedupe(broadArts));
   }
-  const seen = new Set(), uniq = [];
-  for (const a of arts){
-    if (a.url && a.title && !seen.has(a.url)){ seen.add(a.url); uniq.push(a); }
-  }
-  const trusted = uniq.filter(a => isTrusted(a.url));
-  const rest    = uniq.filter(a => !isTrusted(a.url));
-  // 信頼ソースを先頭に。多めに返して、クライアント側で「もっと見る」表示にする
-  const ordered = trusted.concat(rest);
-  return ordered.slice(0, 20);
+  return ordered.slice(0, 30);
 }
 
 /* ---------- ②③ AI（Anthropic API）で翻訳・概況生成 ---------- */
@@ -377,20 +391,25 @@ async function claudeText(system, user, maxTokens = 800){
   return (d.content || []).map(b => b.text || "").join("").trim();
 }
 
-// ③ 英語などの見出しを日本語へ翻訳（既に日本語ならそのまま）
+// ③ 英語などの見出しを日本語へ翻訳（日本語の見出しはスキップ＝高速化）
+const hasJapanese = s => /[\u3040-\u30ff\u4e00-\u9faf]/.test(s || "");
 async function translateTitles(articles){
   if (!ANTHROPIC || !articles.length) return articles;
-  const items = articles.map((a, i) => ({ i, t: a.title }));
+  // 先頭12件のうち、日本語でないものだけ翻訳対象にする
+  const targets = articles.slice(0, 12)
+    .map((a, i) => ({ i, t: a.title }))
+    .filter(o => !hasJapanese(o.t));
+  if (!targets.length) return articles;   // すべて日本語なら翻訳しない
   const out = await claudeText(
     "あなたは翻訳者です。ニュース見出しを自然な日本語に訳します。固有名詞は一般的な日本語表記にします。",
-    `次の各見出しを日本語にしてください。すでに日本語ならそのまま返します。出力はJSON配列のみで、各要素は {\"i\":番号,\"ja\":\"日本語見出し\"} の形式。前後の説明は一切書かないでください。\n\n${JSON.stringify(items, null, 0)}`,
-    1200
+    `次の各見出しを日本語にしてください。出力はJSON配列のみで、各要素は {\"i\":番号,\"ja\":\"日本語見出し\"} の形式。前後の説明は一切書かないでください。\n\n${JSON.stringify(targets, null, 0)}`,
+    900
   );
   try {
     const arr = JSON.parse(out.replace(/```json|```/g, "").trim());
     const map = new Map(arr.map(o => [o.i, o.ja]));
     return articles.map((a, i) => map.has(i) ? { ...a, title: map.get(i) } : a);
-  } catch { return articles; }  // 失敗時は原文のまま
+  } catch { return articles; }
 }
 
 // ② 記事が少ないときのAI概況（出典URLは作らない・AI生成と明示）
@@ -414,15 +433,17 @@ app.get("/api/news", async (req, res) => {
 
   let articles = [], overview = "", reason = "";
   try {
-    articles = await gatherArticles(ja, en, topic);      // ① 信頼ソース優先で収集
-    // I-Map統合: 背景として日本語Wikipediaも少し添える
-    try {
-      const wiki = await fromWikipedia(ja, topic);
-      const seen = new Set(articles.map(a => a.url));
-      for (const w of wiki.slice(0, 2)) if (!seen.has(w.url)) articles.push(w);
-    } catch (_) {}
-    articles = await translateTitles(articles);          // ③ 見出しを日本語化
-    if (articles.length < 3) overview = await aiOverview(ja, topic);  // ② 少なければAI概況
+    // 記事とWikipediaを並列取得（高速化）
+    const [arts, wiki] = await Promise.all([
+      gatherArticles(ja, en, topic),
+      fromWikipedia(ja, topic).catch(() => []),
+    ]);
+    articles = arts;
+    const seen = new Set(articles.map(a => a.url));
+    for (const w of wiki.slice(0, 2)) if (!seen.has(w.url)) articles.push(w);
+
+    articles = await translateTitles(articles);          // 日本語見出しはスキップ
+    if (articles.length < 3) overview = await aiOverview(ja, topic);
     if (!articles.length && !overview) reason = "empty";
   } catch (e){ console.warn("news取得エラー:", e.message); reason = "error"; }
 
