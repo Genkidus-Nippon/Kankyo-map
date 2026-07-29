@@ -14,7 +14,7 @@
   --land:     #6cbf7c;   /* 陸 */
   --land-hi:  #34b36a;   /* 浮いた陸 */
   --nodata:   #d6dde7;
-  --f-disp: "Shippori Mincho", serif;
+  --f-disp: "Noto Sans JP", system-ui, sans-serif;   /* 大見出しもNoto Sans JPに */
   --f-body: "Noto Sans JP", system-ui, sans-serif;
 }
 *{ box-sizing:border-box; }
@@ -233,3 +233,45 @@ body.menu-open .nav-menu{ transform:translateX(0); }
   .info-card{ width:min(90vw,310px); }
   .crop-legend{ left:14px; right:14px; width:auto; }
 }
+
+/* =========================================================
+   Imaps 追加: フッター・スポンサー枠・出典ページ・SDG目標
+   ========================================================= */
+.hero-main{ font-weight:800; }
+
+/* フッター */
+.site-footer{
+  margin-top:40px; padding:26px 20px 40px; border-top:1px solid var(--line);
+  text-align:center; color:var(--ink-soft);
+}
+.foot-links{ display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin-bottom:12px; }
+.foot-link{ background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:.85rem; font-family:var(--f-body); }
+.foot-link:hover{ color:var(--brand); text-decoration:underline; }
+.copyright{ margin:0; font-size:.82rem; letter-spacing:.06em; color:var(--ink-soft); }
+
+/* スポンサー/アフィリエイト枠 */
+.sponsor-slot{
+  margin:30px auto 0; max-width:640px; padding:22px; text-align:center;
+  background:repeating-linear-gradient(45deg,#f6f9fe,#f6f9fe 10px,#eef3fb 10px,#eef3fb 20px);
+  border:1px dashed #c2d2ea; border-radius:14px; color:var(--ink-soft);
+}
+.sponsor-label{ display:inline-block; font-size:.64rem; font-weight:700; letter-spacing:.18em; color:#8aa0c0; margin-bottom:6px; }
+.sponsor-slot p{ margin:0; font-size:.86rem; }
+
+/* 出典ページ */
+.view-sources{ background:var(--bg); overflow-y:auto; }
+.src-list{ margin-top:22px; display:grid; gap:16px; }
+.src-item{ padding:18px 20px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 3px 12px rgba(30,42,55,.06); }
+.src-item h3{ margin:0 0 8px; font-size:1.02rem; }
+.src-item ul{ margin:0; padding-left:18px; }
+.src-item li{ font-size:.9rem; line-height:1.9; color:var(--ink); }
+.src-item a{ color:var(--brand); text-decoration:none; }
+.src-item a:hover{ text-decoration:underline; }
+
+/* カード内の「出典」リンク */
+.src-link{ color:var(--brand); font-weight:700; text-decoration:none; border-bottom:1px solid currentColor; }
+.src-link:hover{ color:var(--brand-d); }
+
+/* SDGsの定量目標 */
+.sdg-target{ margin:10px 0 0; padding:8px 10px; font-size:.82rem; line-height:1.5; color:#234634;
+  background:#eafaf0; border:1px solid #bfe9cf; border-radius:8px; }
