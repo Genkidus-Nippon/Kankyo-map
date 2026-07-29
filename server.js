@@ -393,13 +393,41 @@ async function claudeText(system, user, maxTokens = 800){
 
 // ③ 英語などの見出しを日本語へ翻訳（日本語の見出しはスキップ＝高速化）
 const hasJapanese = s => /[\u3040-\u30ff\u4e00-\u9faf]/.test(s || "");
+const DEEPL = process.env.DEEPL_KEY;
+
+// DeepL 翻訳（設定時のみ）。無料キーは末尾 ":fx"
+async function deeplTranslate(texts){
+  if (!DEEPL || !texts.length) return null;
+  const base = DEEPL.endsWith(":fx") ? "https://api-free.deepl.com" : "https://api.deepl.com";
+  const params = new URLSearchParams();
+  params.set("target_lang", "JA");
+  for (const t of texts) params.append("text", t);
+  const r = await safeFetch(base + "/v2/translate", 12000, {
+    method: "POST",
+    headers: { "Authorization": `DeepL-Auth-Key ${DEEPL}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+  if (!r.ok){ console.warn("DeepL失敗:", r.status); return null; }
+  const d = await r.json().catch(() => ({}));
+  const out = (d.translations || []).map(x => x.text);
+  return out.length === texts.length ? out : null;
+}
+
 async function translateTitles(articles){
-  if (!ANTHROPIC || !articles.length) return articles;
-  // 先頭12件のうち、日本語でないものだけ翻訳対象にする
   const targets = articles.slice(0, 12)
     .map((a, i) => ({ i, t: a.title }))
     .filter(o => !hasJapanese(o.t));
-  if (!targets.length) return articles;   // すべて日本語なら翻訳しない
+  if (!targets.length) return articles;
+
+  // DeepL 優先（速くて安価）
+  const dl = await deeplTranslate(targets.map(o => o.t));
+  if (dl){
+    const map = new Map(targets.map((o, k) => [o.i, dl[k]]));
+    return articles.map((a, i) => map.has(i) ? { ...a, title: map.get(i) } : a);
+  }
+
+  // DeepLが無ければ AI で翻訳
+  if (!ANTHROPIC) return articles;
   const out = await claudeText(
     "あなたは翻訳者です。ニュース見出しを自然な日本語に訳します。固有名詞は一般的な日本語表記にします。",
     `次の各見出しを日本語にしてください。出力はJSON配列のみで、各要素は {\"i\":番号,\"ja\":\"日本語見出し\"} の形式。前後の説明は一切書かないでください。\n\n${JSON.stringify(targets, null, 0)}`,
@@ -410,6 +438,17 @@ async function translateTitles(articles){
     const map = new Map(arr.map(o => [o.i, o.ja]));
     return articles.map((a, i) => map.has(i) ? { ...a, title: map.get(i) } : a);
   } catch { return articles; }
+}
+
+// 関連性フィルタ: 国名かテーマを含む記事を優先（十分あれば関連のみ）
+function relevanceFilter(articles, ja, en, topic){
+  const enL = (en || "").toLowerCase(), topEn = topicToEn(topic).toLowerCase();
+  const hit = a => {
+    const t = `${a.title || ""} ${a.desc || ""}`, tl = t.toLowerCase();
+    return t.includes(ja) || (enL && tl.includes(enL)) || t.includes(topic) || (topEn && tl.includes(topEn));
+  };
+  const rel = articles.filter(hit);
+  return rel.length >= 3 ? rel : articles;
 }
 
 // ② 記事が少ないときのAI概況（出典URLは作らない・AI生成と明示）
@@ -434,15 +473,17 @@ app.get("/api/news", async (req, res) => {
   let articles = [], overview = "", reason = "";
   try {
     // 記事とWikipediaを並列取得（高速化）
-    const [arts, wiki] = await Promise.all([
+    const [arts, wikiRaw] = await Promise.all([
       gatherArticles(ja, en, topic),
       fromWikipedia(ja, topic).catch(() => []),
     ]);
     articles = arts;
+    const wiki = wikiRaw.filter(w => w.title.includes(ja) || w.title.includes(topic)).slice(0, 2);
     const seen = new Set(articles.map(a => a.url));
-    for (const w of wiki.slice(0, 2)) if (!seen.has(w.url)) articles.push(w);
+    for (const w of wiki) if (!seen.has(w.url)) articles.push(w);
 
-    articles = await translateTitles(articles);          // 日本語見出しはスキップ
+    articles = relevanceFilter(articles, ja, en, topic);   // 関連性の低い記事を除外
+    articles = await translateTitles(articles);            // 日本語見出しはスキップ
     if (articles.length < 3) overview = await aiOverview(ja, topic);
     if (!articles.length && !overview) reason = "empty";
   } catch (e){ console.warn("news取得エラー:", e.message); reason = "error"; }
@@ -649,6 +690,7 @@ app.listen(PORT, () => {
     console.log("CURRENTS_KEY: 未設定（GDELTを使用）");
   }
   console.log("AI補助（翻訳・概況）:", ANTHROPIC ? `有効（model=${AI_MODEL}）` : "無効（ANTHROPIC_API_KEY 未設定）");
+  console.log("DeepL翻訳:", DEEPL ? "有効" : "無効（DEEPL_KEY 未設定）");
 });
 
 // 起動確認用
