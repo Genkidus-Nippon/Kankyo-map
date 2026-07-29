@@ -59,7 +59,7 @@ let mapReady=false, currentMode="env";
 function showView(name){
   const isMap = MAP_MODES.includes(name);
   const viewKey = isMap ? "map" : (views[name] ? name : "home");
-  Object.entries(views).forEach(([k,el]) => { el.hidden = (k!==viewKey); });
+  Object.entries(views).forEach(([k,el]) => { if(el) el.hidden = (k!==viewKey); });
   document.body.dataset.view = viewKey;
   closeMenu();
   closeAllCards();                 // 画面遷移でカードを閉じる
