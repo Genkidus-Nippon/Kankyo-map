@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Imaps（いまっぷす）</title>
+  <title>Imaps</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -54,7 +54,7 @@
     <div class="hero-wrap">
       <div class="hero-plate">
         <span class="hero-main">Imaps</span>
-        <span class="hero-sub">いまっぷす ／ Information Maps of the World</span>
+        <span class="hero-sub">Information Maps of the World</span>
         <p class="hero-lead">世界の「いま」を、地図から。見たいテーマを選んでください。</p>
         <div class="hero-grid">
           <button class="hero-card" data-go="imap"><span class="hc-emoji">🔎</span><span class="hc-title">I-Map</span><span class="hc-desc">テーマから記事へ</span></button>
@@ -82,6 +82,7 @@
     <div class="map-controls">
       <select id="mapSelect" class="ctrl-select" aria-label="地図を選ぶ"></select>
       <select id="themeSelect" class="ctrl-select" aria-label="テーマを選ぶ"></select>
+      <input type="text" id="freeSearch" class="free-search" placeholder="自由検索（例: 洪水, EV, 森林火災）" aria-label="自由検索" hidden />
       <button id="applyBtn" class="search-btn">表示</button>
       <div id="decadeControl" class="decade-control" hidden>
         <input type="range" id="decadeSlider" min="1950" max="2020" step="10" value="2020" aria-label="年代" />
@@ -117,7 +118,7 @@
     <div class="panel">
       <p class="eyebrow">ABOUT</p>
       <h1>Genkidusとは</h1>
-      <p class="lead">「世界のいまを、地図から。」Imaps（いまっぷす）を運営するプロジェクトです。</p>
+      <p class="lead">「世界のいまを、地図から。」Imapsを運営するプロジェクトです。</p>
       <p>Imapsは、世界地図の上からさまざまな情報に直感的にアプローチできる学びのプラットフォームです。グローバル向けには無料で公開し、あわせて、Imapsを授業や探究学習で活かすための教材・プログラムを教育機関向けにご提供していく構想です。現在は4つの地図があります。</p>
       <div class="how">
         <div class="how-item"><span class="how-n">🔎</span><div><h3>I-Map</h3><p>気になるテーマを選び、国をダブルクリックすると関連する記事・背景情報が開きます。</p></div></div>
