@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>I-MAP</title>
+  <title>Imaps（いまっぷす）</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -22,19 +22,14 @@
   <nav id="navMenu" class="nav-menu" aria-hidden="true">
     <ul>
       <li><button class="nav-link" data-go="home">HOME</button></li>
+      <li><button class="nav-link" data-go="imap">I-Map</button></li>
       <li><button class="nav-link" data-go="env">環境世界地図</button></li>
-      <li><button class="nav-link" data-go="society">現社世界地図</button></li>
-      <li><button class="nav-link" data-go="history">歴史世界地図</button></li>
       <li><button class="nav-link" data-go="crops">作物世界地図</button></li>
       <li><button class="nav-link" data-go="sdg">SDGs世界地図</button></li>
-      <li><button class="nav-link" data-go="warming">温暖化世界地図</button></li>
-      <li><button class="nav-link" data-go="desert">砂漠化世界地図</button></li>
-      <li><button class="nav-link" data-go="forest">森林減少世界地図</button></li>
-      <li><button class="nav-link" data-go="water">水不足世界地図</button></li>
-      <li><button class="nav-link" data-go="air">大気汚染世界地図</button></li>
       <li><button class="nav-link" data-go="user">ユーザー世界地図</button></li>
       <li class="nav-div"></li>
-      <li><button class="nav-link" data-go="about">I-MAPとは</button></li>
+      <li><button class="nav-link" data-go="sources">出典</button></li>
+      <li><button class="nav-link" data-go="about">Genkidusとは</button></li>
       <li><button class="nav-link" data-go="contact">問い合わせ</button></li>
     </ul>
     <p class="nav-foot">世界を、地図から読み解く。</p>
@@ -58,24 +53,28 @@
 
     <div class="hero-wrap">
       <div class="hero-plate">
-        <span class="hero-main">I-MAP</span>
-        <span class="hero-sub">Information Maps of the World</span>
-        <p class="hero-lead">世界の情報を、地図から。見たいテーマを選んでください。</p>
+        <span class="hero-main">Imaps</span>
+        <span class="hero-sub">いまっぷす ／ Information Maps of the World</span>
+        <p class="hero-lead">世界の「いま」を、地図から。見たいテーマを選んでください。</p>
         <div class="hero-grid">
-          <button class="hero-card" data-go="env"><span class="hc-emoji">🌏</span><span class="hc-title">環境</span></button>
-          <button class="hero-card" data-go="society"><span class="hc-emoji">🌐</span><span class="hc-title">現社</span></button>
-          <button class="hero-card" data-go="history"><span class="hc-emoji">📜</span><span class="hc-title">歴史</span></button>
-          <button class="hero-card" data-go="crops"><span class="hc-emoji">🌾</span><span class="hc-title">作物</span></button>
-          <button class="hero-card" data-go="sdg"><span class="hc-emoji">🎯</span><span class="hc-title">SDGs</span></button>
-          <button class="hero-card" data-go="warming"><span class="hc-emoji">☀️</span><span class="hc-title">温暖化</span></button>
-          <button class="hero-card" data-go="desert"><span class="hc-emoji">🏜️</span><span class="hc-title">砂漠化</span></button>
-          <button class="hero-card" data-go="forest"><span class="hc-emoji">🌲</span><span class="hc-title">森林減少</span></button>
-          <button class="hero-card" data-go="water"><span class="hc-emoji">💧</span><span class="hc-title">水不足</span></button>
-          <button class="hero-card" data-go="air"><span class="hc-emoji">🌫️</span><span class="hc-title">大気汚染</span></button>
-          <button class="hero-card" data-go="user"><span class="hc-emoji">🗣️</span><span class="hc-title">ユーザー</span></button>
+          <button class="hero-card" data-go="imap"><span class="hc-emoji">🔎</span><span class="hc-title">I-Map</span><span class="hc-desc">テーマから記事へ</span></button>
+          <button class="hero-card" data-go="env"><span class="hc-emoji">🌏</span><span class="hc-title">環境世界地図</span><span class="hc-desc">温暖化など・年代で色分け</span></button>
+          <button class="hero-card" data-go="crops"><span class="hc-emoji">🌾</span><span class="hc-title">作物世界地図</span><span class="hc-desc">収量を色分け</span></button>
+          <button class="hero-card" data-go="sdg"><span class="hc-emoji">🎯</span><span class="hc-title">SDGs世界地図</span><span class="hc-desc">目標の達成状況</span></button>
         </div>
       </div>
+      <!-- スポンサー枠（HOME） -->
+      <div class="sponsor-slot"><span class="sponsor-label">SPONSORED</span><p>この枠にスポンサー・アフィリエイトを掲載できます。</p></div>
     </div>
+
+    <footer class="site-footer">
+      <div class="foot-links">
+        <button class="foot-link" data-go="about">Genkidusとは</button>
+        <button class="foot-link" data-go="sources">出典</button>
+        <button class="foot-link" data-go="contact">問い合わせ</button>
+      </div>
+      <p class="copyright">©Genkidus</p>
+    </footer>
   </section>
 
   <!-- ========== 世界地図（3モード共通） ========== -->
@@ -114,39 +113,28 @@
   </section>
 
   <!-- ========== I-MAPとは ========== -->
-  <section id="view-about" class="view view-about" aria-label="I-MAPとは" hidden>
+  <section id="view-about" class="view view-about" aria-label="Genkidusとは" hidden>
     <div class="panel">
       <p class="eyebrow">ABOUT</p>
-      <h1>I-MAPとは</h1>
-      <p class="lead">世界地図の上から、さまざまな情報に直感的にアプローチできる学びのプラットフォームです。</p>
-      <p>「知りたいけれど、どこから調べればいいか分からない」。その最初のハードルを下げるために、情報を地図という入り口から届けます。授業や探究学習で、生徒が自分の関心から世界を広げていくことを想定しています。地図は大きく3つのタイプに分かれます。</p>
-
-      <h2 style="font-family:var(--f-disp);margin:28px 0 6px;">① 調べる地図（テーマを選んで記事へ）</h2>
+      <h1>Genkidusとは</h1>
+      <p class="lead">「世界のいまを、地図から。」Imaps（いまっぷす）を運営するプロジェクトです。</p>
+      <p>Imapsは、世界地図の上からさまざまな情報に直感的にアプローチできる学びのプラットフォームです。グローバル向けには無料で公開し、あわせて、Imapsを授業や探究学習で活かすための教材・プログラムを教育機関向けにご提供していく構想です。現在は4つの地図があります。</p>
       <div class="how">
-        <div class="how-item"><span class="how-n">🌏</span><div><h3>環境世界地図</h3><p>テーマを選び、国をダブルクリックすると環境ニュースが開きます。</p></div></div>
-        <div class="how-item"><span class="how-n">🌐</span><div><h3>現社世界地図</h3><p>貧困・難民・紛争など現代社会のテーマから、各国のニュースへ。</p></div></div>
-        <div class="how-item"><span class="how-n">📜</span><div><h3>歴史世界地図</h3><p>歴史のテーマを選ぶと、関連する日本語Wikipedia記事が開きます。</p></div></div>
+        <div class="how-item"><span class="how-n">🔎</span><div><h3>I-Map</h3><p>気になるテーマを選び、国をダブルクリックすると関連する記事・背景情報が開きます。</p></div></div>
+        <div class="how-item"><span class="how-n">🌏</span><div><h3>環境世界地図</h3><p>温暖化・砂漠化・森林減少・水不足・大気汚染をテーマに選び、年代スライダーで進行を色分け表示。</p></div></div>
+        <div class="how-item"><span class="how-n">🌾</span><div><h3>作物世界地図</h3><p>作物の収量を国ごとに色分け。多い国が赤、少ない国が青。</p></div></div>
+        <div class="how-item"><span class="how-n">🎯</span><div><h3>SDGs世界地図</h3><p>17目標と指標を選び、定量目標に対する達成状況を色分け表示。50か国を収録。</p></div></div>
       </div>
+      <p style="margin-top:22px;font-size:.86rem;color:var(--ink-soft);">※ データ型の地図の数値は代表値（概算）です。詳しい出典は「出典」ページをご覧ください。</p>
 
-      <h2 style="font-family:var(--f-disp);margin:28px 0 6px;">② 色で比べる地図（データを可視化）</h2>
-      <div class="how">
-        <div class="how-item"><span class="how-n">🌾</span><div><h3>作物世界地図</h3><p>作物を選ぶと、収量の多い国が赤・少ない国が青に色分けされます。</p></div></div>
-        <div class="how-item"><span class="how-n">🎯</span><div><h3>SDGs世界地図</h3><p>17目標と指標を選ぶと、課題の大きい国が赤・良好な国が青に。50か国を収録。</p></div></div>
-        <div class="how-item"><span class="how-n">☀️</span><div><h3>温暖化・砂漠化・森林減少・水不足・大気汚染</h3><p>年代スライダー（1950〜2020）で、進行の移り変わりを追えます。</p></div></div>
-      </div>
+      <div class="sponsor-slot"><span class="sponsor-label">SPONSORED</span><p>この枠にスポンサー・アフィリエイトを掲載できます。</p></div>
 
-      <h2 style="font-family:var(--f-disp);margin:28px 0 6px;">③ 声を集める地図</h2>
-      <div class="how">
-        <div class="how-item"><span class="how-n">🗣️</span><div><h3>ユーザー世界地図</h3><p>利用者から寄せられた声を国ごとに集め、多い国ほど赤く表示。クリックで一覧が読めます。</p></div></div>
-      </div>
-
-      <p style="margin-top:22px;font-size:.86rem;color:var(--ink-soft);">※ 作物・SDGs・特化型マップの数値は、傾向を示す代表値（概算）です。厳密な最新統計ではありません。</p>
       <div class="about-cta">
-        <button class="cta" data-go="env">環境をひらく</button>
+        <button class="cta" data-go="imap">I-Mapをひらく</button>
         <button class="cta ghost" data-go="sdg">SDGsをひらく</button>
-        <button class="cta ghost" data-go="warming">温暖化をひらく</button>
       </div>
     </div>
+    <footer class="site-footer"><p class="copyright">©Genkidus</p></footer>
   </section>
 
   <!-- ========== 問い合わせ ========== -->
@@ -162,7 +150,9 @@
         <button type="submit" class="cta">送信する</button>
         <p id="formNote" class="form-note" role="status"></p>
       </form>
+      <div class="sponsor-slot"><span class="sponsor-label">SPONSORED</span><p>この枠にスポンサー・アフィリエイトを掲載できます。</p></div>
     </div>
+    <footer class="site-footer"><p class="copyright">©Genkidus</p></footer>
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
