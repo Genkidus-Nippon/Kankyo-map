@@ -13,8 +13,8 @@ const ENDPOINTS = {
 const MODES = {
   imap:    { title:"I-Map", type:"info", endpoint:ENDPOINTS.news,
              hint:"テーマを選び、国をダブルクリックすると関連する記事・情報が開きます。" },
-  env:     { title:"環境世界地図", type:"envdata",
-             hint:"テーマ（温暖化など）と年代を選ぶと、進行度が色で分かります。国クリックで詳細。" },
+  env:     { title:"環境世界地図", type:"envdata", endpoint:ENDPOINTS.news,
+             hint:"テーマ（温暖化など）で色分け。自由検索に語を入れて国クリックで記事も見られます。" },
   crops:   { title:"作物世界地図", type:"crops", endpoint:ENDPOINTS.crops,
              hint:"作物を選んで表示。収量で色が変わり、国をダブルクリックで詳細が出ます。" },
   sdg:     { title:"SDGs世界地図", type:"sdg",
@@ -82,6 +82,7 @@ function applyMode(){
   setControls(m.type);
   document.getElementById("mapHint").textContent = m.hint;
   cropData=null; themeData=null; sdgData=null; userData=null; currentMetric=null;
+  if(freeSearch) freeSearch.value="";
   if (m.type === "envdata"){
     populateThemeSelect();          // メトリクス（温暖化等）を選ぶ
     updateModeTitle(); recolorMap();
@@ -97,7 +98,8 @@ function applyMode(){
 }
 function setControls(type){
   themeSelect.hidden   = !(type==="info" || type==="crops" || type==="envdata");
-  applyBtn.hidden      = !(type==="info" || type==="crops");
+  applyBtn.hidden      = !(type==="info" || type==="crops" || type==="envdata");
+  freeSearch.hidden    = !(type==="info" || type==="envdata");
   decadeControl.hidden = (type!=="envdata");
   goalSelect.hidden     = (type!=="sdg");
   indicatorSelect.hidden= (type!=="sdg");
@@ -225,7 +227,10 @@ function resetHover(){ if(hoveredNode){ restCountry(hoveredNode); hoveredNode=nu
 function onCountryDblClick(feature){
   const type = MODES[currentMode].type;
   if (type==="crops") openCropCard(feature);
-  else if (type==="envdata") openThemeCard(feature);
+  else if (type==="envdata"){
+    if((freeSearch.value||"").trim()) openInfoCard(feature);   // 自由検索中は記事
+    else openThemeCard(feature);                               // それ以外はデータ詳細
+  }
   else if (type==="sdg") openSdgCard(feature);
   else if (type==="user") openUserCard(feature);
   else openInfoCard(feature);
@@ -257,7 +262,11 @@ function fmt(n){ return (n>=1)?n.toLocaleString("ja-JP"):n; }
 const cardLayer=document.getElementById("cardLayer");
 const openCards=new Map();
 const CARD_W=300, GAP=14;
-function currentTopic(){ return (themeSelect.value||"").trim(); }
+function currentTopic(){
+  const free=(freeSearch.value||"").trim();
+  if(free) return free;
+  return (themeSelect.value||"").trim();
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 function closeAllCards(){ openCards.forEach(({card})=>card.remove()); openCards.clear(); }
 
@@ -438,6 +447,7 @@ function closeCard(id){ openCards.get(id)?.card.remove(); openCards.delete(id); 
 const mapSelect=document.getElementById("mapSelect");
 const themeSelect=document.getElementById("themeSelect");
 const applyBtn=document.getElementById("applyBtn");
+const freeSearch=document.getElementById("freeSearch");
 const toastEl=document.getElementById("mapToast");
 const pulseEl=document.getElementById("mapPulse");
 const decadeControl=document.getElementById("decadeControl");
@@ -517,6 +527,8 @@ decadeSlider.addEventListener("change", ()=>{
 });
 
 function applyTheme(){
+  const free=(freeSearch.value||"").trim();
+  if(free && (currentMode==="imap" || currentMode==="env")){ runFreeSearch(); return; }
   const val=themeSelect.value;
   if(!val){ flashHint(currentMode==="crops"?"作物を選んでください。":"テーマを選んでください。"); return; }
   playPulse();
@@ -533,6 +545,15 @@ function applyTheme(){
 }
 applyBtn.addEventListener("click", applyTheme);
 themeSelect.addEventListener("change", applyTheme);
+
+function runFreeSearch(){
+  const q=(freeSearch.value||"").trim();
+  if(!q) return;
+  playPulse(); showToast(`「${q}」で検索中`);
+  openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
+  document.getElementById("mapHint").textContent = `「${q}」で記事を検索します。国をダブルクリックしてください。`;
+}
+freeSearch.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); runFreeSearch(); } });
 
 function playPulse(){
   pulseEl.classList.remove("go"); void pulseEl.offsetWidth; pulseEl.classList.add("go");
