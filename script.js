@@ -4,9 +4,9 @@
    ========================================================= */
 
 const ENDPOINTS = {
-  news:"/api/news", history:"/api/history", crops:"/api/crops",
+  news:"/api/news", newsEnrich:"/api/news-enrich", history:"/api/history", crops:"/api/crops",
   cropDetail:"/api/crop-detail", theme:"/api/theme", themeDetail:"/api/theme-detail",
-  aiArticles:"/api/ai-articles",
+  aiArticles:"/api/ai-articles", searchCount:"/api/search-count",
   contact:"/api/contact",
 };
 // 利用者の言語（ブラウザ設定）。記事・AIの翻訳先に使う
@@ -102,7 +102,7 @@ function applyMode(){
   } else if (m.type === "user"){
     loadUser();
   } else if (m.type === "aiinfo"){
-    aiCounts={}; populateThemeSelect(); updateModeTitle(); recolorMap();
+    aiCounts={}; aiScanTopic=""; aiMax=6; populateThemeSelect(); updateModeTitle(); recolorMap();
   } else {
     if (m.type === "info" || m.type === "crops") populateThemeSelect();
     updateModeTitle();
@@ -183,12 +183,21 @@ addEventListener("resize", ()=>{ if(sakuraOn) sizeCanvas(); });
 const svg=d3.select("#worldMap"), loading=document.getElementById("mapLoading");
 let gRoot,path,projection,geo,countrySel;
 let panX=0, panY=0;
-function applyPan(){ if(gRoot){ gRoot.attr("transform",`translate(${panX},${panY})`); repositionCards(); } }
+function applyPan(){
+  const lx=innerWidth*0.45, ly=innerHeight*0.45;   // 4方向の可動域
+  panX=Math.max(-lx, Math.min(lx, panX));
+  panY=Math.max(-ly, Math.min(ly, panY));
+  if(gRoot){ gRoot.attr("transform",`translate(${panX},${panY})`); repositionCards(); }
+}
 let cropData=null;     // 作物モードのデータ
 let themeData=null;    // 特化型モードのデータ
 let sdgData=null;      // SDGsモードのデータ
 let userData=null;     // ユーザーモードのデータ
-let aiCounts={};       // AI-Map: 国ごとの生成記事数（着色用）
+let aiCounts={};       // AI-Map: 国ごとの検索ヒット数（テーマ設定時にスキャン→着色）
+let aiMax=6, aiScanTopic="";
+const AI_SCAN_COUNTRIES = ["United States of America","China","India","Japan","Germany","United Kingdom",
+  "France","Brazil","Russia","Canada","Australia","South Korea","Mexico","Indonesia","Nigeria","South Africa",
+  "Egypt","Saudi Arabia","Turkey","Argentina","Italy","Spain","Kenya","Thailand","Vietnam","Ukraine","Iran","Colombia"];
 function activeChoro(){
   if (currentMode==="crops") return cropData;
   if (currentMode==="sdg") return sdgData;
@@ -208,14 +217,23 @@ async function initMap(){
     f.append("feDropShadow").attr("dx",0).attr("dy",4).attr("stdDeviation",6).attr("flood-color","#06202b").attr("flood-opacity",0.55);
     gRoot=svg.append("g");
     projection=d3.geoNaturalEarth1(); path=d3.geoPath(projection);
-    countrySel=gRoot.selectAll("path.country").data(geo).enter().append("path")
+    // 飛び地対策: MultiPolygonを陸地ごとの単一Polygonに分割（親国の属性を継承）
+    const parts=[];
+    geo.forEach(f=>{
+      if(f.geometry && f.geometry.type==="MultiPolygon"){
+        f.geometry.coordinates.forEach(coords=>{
+          parts.push({ type:"Feature", properties:f.properties, id:f.id, geometry:{type:"Polygon",coordinates:coords} });
+        });
+      } else if(f.geometry){ parts.push(f); }
+    });
+    countrySel=gRoot.selectAll("path.country").data(parts).enter().append("path")
       .attr("class","country").on("mouseenter",onEnter).on("mouseleave",onLeave)
       .on("dblclick",(e,d)=>{ e.preventDefault(); onCountryDblClick(d); });
     svg.on("mouseleave",resetHover);
 
     // パンのみ（ズームなし）。二本指スクロール＝画面移動、ドラッグでも移動
-    svg.node().addEventListener("wheel", (e)=>{ e.preventDefault(); panX-=e.deltaX; panY-=e.deltaY; applyPan(); }, {passive:false});
-    svg.call(d3.drag().on("drag",(e)=>{ panX+=e.dx; panY+=e.dy; applyPan(); }));
+    svg.node().addEventListener("wheel", (e)=>{ e.preventDefault(); panX-=e.deltaX*0.5; panY-=e.deltaY*0.5; applyPan(); }, {passive:false});
+    svg.call(d3.drag().on("drag",(e)=>{ panX+=e.dx*0.7; panY+=e.dy*0.7; applyPan(); }));
 
     fitMap(); loading.hidden=true;
     addEventListener("resize", ()=>{ fitMap(); repositionCards(); });
@@ -240,8 +258,8 @@ const cropColor=d3.interpolateRgbBasis(["#2c7fb8","#7fcdbb","#fee08b","#f46d43",
 function colorForValue(v,max){ return cropColor(Math.min(1,Math.sqrt(Math.max(0,v)/max))); }
 function recolorMap(){
   if(!countrySel) return;
-  if(currentMode==="aimap"){                     // AI-Map: クリックした国をAI情報量で着色
-    countrySel.style("fill", d=>{ const n=aiCounts[d.properties.name]; return (n==null)?null:colorForValue(n,6); });
+  if(currentMode==="aimap"){                     // AI-Map: 検索ヒット数で着色（テーマ設定時にスキャン）
+    countrySel.style("fill", d=>{ const n=aiCounts[d.properties.name]; return (n==null)?"var(--nodata)":colorForValue(n,aiMax||6); });
     showAiLegend();
     return;
   }
@@ -271,7 +289,11 @@ function showAiLegend(){
 let hoveredNode=null;
 function liftCountry(node,d){ const [cx,cy]=path.centroid(d); if(!isFinite(cx)) return; d3.select(node).raise().classed("is-hover",true).interrupt().transition().duration(200).ease(d3.easeCubicOut).attr("transform",`translate(${cx},${cy}) scale(1.09) translate(${-cx},${-cy})`); }
 function restCountry(node){ d3.select(node).classed("is-hover",false).interrupt().transition().duration(200).ease(d3.easeCubicOut).attr("transform","translate(0,0) scale(1)"); }
-function onEnter(event,d){ if(hoveredNode&&hoveredNode!==this) restCountry(hoveredNode); hoveredNode=this; liftCountry(this,d); }
+function onEnter(event,d){
+  if(hoveredNode&&hoveredNode!==this) restCountry(hoveredNode);
+  hoveredNode=this; liftCountry(this,d);
+  if(currentMode==="imap"){ const t=currentTopic(); if(t) prefetchInfo(d.properties.name, jaName(d.properties.name), t); }
+}
 function onLeave(){ if(hoveredNode===this) hoveredNode=null; restCountry(this); }
 function resetHover(){ if(hoveredNode){ restCountry(hoveredNode); hoveredNode=null; } }
 function onCountryDblClick(feature){
@@ -356,22 +378,61 @@ async function fetchInfo(en,ja,topic){
     return { articles:[], overview:"", note:"取得に失敗しました。少し待ってから再度お試しください。" };
   }catch(_){ return { articles:[], overview:"", note:"サーバーに接続できません。npm start でサーバーを起動し http://localhost:3000 を開いてください。" }; }
 }
+const prefetchCache=new Map();   // key: en|topic|lang → Promise<fastResult>
+function newsKey(en,topic){ return `${en}|${topic}|${LOCALE}`; }
+
+function fetchFast(en,ja,topic){
+  const qs=new URLSearchParams({country:ja,country_en:en,topic,lang:LOCALE});
+  return fetch(`${ENDPOINTS.news}?${qs.toString()}`).then(r=>r.ok?r.json():{articles:[]}).catch(()=>({articles:[],note:"サーバーに接続できません。"}));
+}
+// ホバー先読み: マウスを乗せた国の記事を先に取得してキャッシュ
+function prefetchInfo(en,ja,topic){
+  if(!topic) return;
+  const k=newsKey(en,topic);
+  if(prefetchCache.has(k)) return;
+  prefetchCache.set(k, fetchFast(en,ja,topic));
+}
+
 async function loadInfoCard(card,feature){
+  card._feature=feature;
   const en=feature.properties.name, ja=jaName(en), topic=currentTopic();
   const sub=`${MODES[currentMode].title.replace("世界地図","")}: ${topic}`;
   card.innerHTML=headCard(ja,sub)+`<div class="card-loading">検索しています…</div>`;
   bindClose(card);
-  const {articles,overview,note}=await fetchInfo(en,ja,topic);
+
+  // 第1段階（高速）: 先読み済みならそれを使う → ほぼ待たずに表示
+  const k=newsKey(en,topic);
+  const fast = await (prefetchCache.get(k) || fetchFast(en,ja,topic));
+  prefetchCache.delete(k);
+  let articles = fast.articles || [];
+  const note = (!articles.length && fast.note) ? fast.note : "";
+  renderInfoCard(card, ja, sub, articles, "", note, true);
+
+  // 第2段階（enrich）: GDELT + AI概況を後追いで足す
+  try{
+    const qs=new URLSearchParams({country:ja,country_en:en,topic,lang:LOCALE});
+    const r=await fetch(`${ENDPOINTS.newsEnrich}?${qs.toString()}`);
+    if(r.ok){
+      const ex=await r.json();
+      const seen=new Set(articles.map(a=>a.url));
+      const more=(ex.articles||[]).filter(a=>a.url&&!seen.has(a.url));
+      articles=articles.concat(more);
+      renderInfoCard(card, ja, sub, articles, ex.overview||"", articles.length?"":"該当する情報が見つかりませんでした。別のテーマもお試しください。", false);
+    }
+  }catch(_){}
+}
+function renderInfoCard(card, ja, sub, articles, overview, note, loading){
   let body="";
   if(overview) body+=`<div class="ai-overview"><span class="ai-tag">${currentMode==="history"?"AIによる歴史概説":"AIによる概況"}（参考情報）</span><p>${escapeHtml(overview)}</p></div>`;
   if(articles.length){
     body+=`<ul class="news-list">${renderArticles(articles)}</ul>`;
     if(articles.length>8) body+=`<button class="more-btn" data-more>もっと見る（残り${articles.length-8}件）</button>`;
   }
+  if(loading && articles.length) body+=`<div class="card-loading" style="padding:8px 16px">関連情報を追加取得中…</div>`;
   if(note) body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(note)}</span></li></ul>`;
   card.innerHTML=headCard(ja,sub)+body;
   bindClose(card); bindMore(card);
-  requestAnimationFrame(()=>positionCard(card,feature));  // 内容確定後に位置を再計算（画面外防止）
+  const f=card._feature; if(f) requestAnimationFrame(()=>positionCard(card,f));
 }
 function bindClose(card){ card.querySelector(".card-close").addEventListener("click",()=>closeCard(card._id)); }
 
@@ -385,7 +446,31 @@ async function openInfoCard(feature){
   await loadInfoCard(card,feature);
 }
 
-/* AI-Map: AIが解説記事を生成（参考情報・着色） */
+/* AI-Map: テーマ設定時に主要国を検索スキャンして着色（進行状況を表示） */
+async function aiScan(topic){
+  if(!topic || topic===aiScanTopic) return;
+  aiScanTopic=topic; aiCounts={}; aiMax=6; recolorMap();
+  const hint=document.getElementById("mapHint");
+  const list=AI_SCAN_COUNTRIES.slice();
+  let done=0;
+  for(let i=0;i<list.length;i+=4){                       // 4件ずつ並列
+    if(currentMode!=="aimap" || aiScanTopic!==topic) return;   // モード/テーマが変わったら中断
+    const batch=list.slice(i,i+4);
+    await Promise.all(batch.map(async en=>{
+      try{
+        const qs=new URLSearchParams({country_en:en,topic});
+        const r=await fetch(`${ENDPOINTS.searchCount}?${qs.toString()}`);
+        if(r.ok){ const d=await r.json(); aiCounts[en]=d.count||0; if(aiCounts[en]>aiMax) aiMax=aiCounts[en]; }
+      }catch(_){}
+      done++;
+    }));
+    recolorMap();
+    hint.textContent=`「${topic}」の情報量をスキャン中… ${done}/${list.length}か国`;
+  }
+  hint.textContent=`「${topic}」でスキャン完了。国をダブルクリックするとAIが記事を生成します。`;
+}
+
+/* AI-Map: 検索件数に応じた本数でAI記事を生成（着色は変更しない＝クリックで色が残らない） */
 async function openAiCard(feature){
   const topic=currentTopic();
   if(!topic){ flashHint("分野と小テーマを選ぶか、自由検索を入力してください。"); return; }
@@ -398,25 +483,25 @@ async function openAiCard(feature){
   card.innerHTML=headCard(ja,sub)+`<div class="card-loading">AIが記事を生成しています…</div>`;
   bindClose(card);
 
+  const cnt=aiCounts[en]||0;
+  const n=Math.max(2, Math.min(6, Math.round(cnt/8)+2));   // 検索件数→記事本数
   let d={};
   try{
-    const qs=new URLSearchParams({country:ja,country_en:en,topic,lang:LOCALE});
+    const qs=new URLSearchParams({country:ja,country_en:en,topic,lang:LOCALE,n:String(n)});
     const r=await fetch(`${ENDPOINTS.aiArticles}?${qs.toString()}`);
     if(r.ok) d=await r.json();
   }catch(_){}
 
   let body="";
   if(d.ok && d.articles && d.articles.length){
-    body+=`<div class="ai-tagbar"><span class="ai-tag">AIによる生成記事（参考情報・Web記事ではありません）</span></div>`;
+    body+=`<div class="ai-tagbar"><span class="ai-tag">AIによる生成記事（参考情報・Web記事ではありません／検索ヒット ${cnt}件）</span></div>`;
     body+=`<ul class="news-list">`+d.articles.map(a=>
       `<li><div class="ai-article"><h3>${escapeHtml(a.title)}</h3><p>${escapeHtml(a.body||"")}</p></div></li>`
     ).join("")+`</ul>`;
-    aiCounts[en]=d.count||d.articles.length; recolorMap();
   }else if(d.reason==="no_ai"){
     body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(d.message||"AI-Mapの利用にはAPIキーが必要です。")}</span></li></ul>`;
   }else{
     body+=`<ul class="news-list"><li><span class="news-dead">この国×テーマではAI記事を生成できませんでした。別のテーマをお試しください。</span></li></ul>`;
-    aiCounts[en]=0; recolorMap();
   }
   card.innerHTML=headCard(ja,sub)+body; bindClose(card);
   requestAnimationFrame(()=>positionCard(card,feature));
@@ -627,7 +712,7 @@ function applyTheme(){
     const q=currentTopic();
     if(!q){ flashHint("分野と小テーマを選ぶか、自由検索を入力してください。"); return; }
     playPulse(); showToast(`「${q}」で表示中`);
-    if(currentMode==="aimap") openCards.forEach(({feature,kind})=>{ if(kind==="ai") openAiCard(feature); });
+    if(currentMode==="aimap") aiScan(q);
     else openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
     return;
   }
@@ -653,11 +738,11 @@ themeSelect.addEventListener("change", ()=>{
 subSelect.addEventListener("change", ()=>{
   const v=subSelect.value; if(!v) return;
   playPulse(); showToast(`「${v}」で表示中`);
-  const k = currentMode==="aimap" ? "ai" : "info";
-  openCards.forEach(({card,feature,kind})=>{ if(kind===k) (currentMode==="aimap"?openAiCard(feature):loadInfoCard(card,feature)); });
-  document.getElementById("mapHint").textContent = currentMode==="aimap"
-    ? `「${v}」で国をダブルクリックするとAIが記事を生成します。`
-    : `「${v}」で国をダブルクリックすると記事が開きます。`;
+  if(currentMode==="aimap"){ aiScan(v); }
+  else {
+    openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
+    document.getElementById("mapHint").textContent = `「${v}」で国をダブルクリックすると記事が開きます。`;
+  }
 });
 
 function runFreeSearch(){
@@ -665,8 +750,7 @@ function runFreeSearch(){
   if(!q) return;
   playPulse(); showToast(`「${q}」で検索中`);
   if(currentMode==="aimap"){
-    openCards.forEach(({feature,kind})=>{ if(kind==="ai") openAiCard(feature); });
-    document.getElementById("mapHint").textContent = `「${q}」で国をダブルクリックするとAIが記事を生成します。`;
+    aiScan(q);
   } else {
     openCards.forEach(({card,feature,kind})=>{ if(kind==="info") loadInfoCard(card,feature); });
     document.getElementById("mapHint").textContent = `「${q}」で記事を検索します。国をダブルクリックしてください。`;
