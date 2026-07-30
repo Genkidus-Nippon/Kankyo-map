@@ -482,27 +482,50 @@ app.get("/api/news", async (req, res) => {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
 
-  let articles = [], overview = "", reason = "";
+  // ── 第1段階（高速）: Currents + Wikipedia のみ。GDELT/AI概況は enrich に回す ──
+  let articles = [], reason = "";
   try {
-    // 記事とWikipediaを並列取得（高速化）
-    const [arts, wikiRaw] = await Promise.all([
-      gatherArticles(ja, en, topic),
+    const [cur, wikiRaw] = await Promise.all([
+      fromCurrents(ja, en, topic).catch(() => []),
       fromWikipedia(ja, topic).catch(() => []),
     ]);
-    articles = arts;
+    const seen = new Set();
+    for (const a of cur) if (a.url && a.title && !seen.has(a.url)){ seen.add(a.url); articles.push(a); }
     const wiki = wikiRaw.filter(w => w.title.includes(ja) || w.title.includes(topic)).slice(0, 2);
-    const seen = new Set(articles.map(a => a.url));
     for (const w of wiki) if (!seen.has(w.url)) articles.push(w);
+    articles = relevanceFilter(articles, ja, en, topic);
+    articles = await translateTitles(articles, lang);
+    if (!articles.length) reason = "empty_fast";
+  } catch (e){ console.warn("news(fast)エラー:", e.message); reason = "error"; }
 
-    articles = relevanceFilter(articles, ja, en, topic);   // 関連性の低い記事を除外
-    articles = await translateTitles(articles, lang);      // 利用者の言語へ翻訳
-    if (articles.length < 3) overview = await aiOverview(ja, topic, lang);
-    if (!articles.length && !overview) reason = "empty";
-  } catch (e){ console.warn("news取得エラー:", e.message); reason = "error"; }
+  res.json({ articles, overview:"", reason, stage:1 });   // すぐ返す（キャッシュは enrich 後）
+});
 
-  const payload = { articles, overview, reason };
-  if (articles.length || overview) cache.set(key, { t: Date.now(), data: payload });
-  res.json(payload);
+// ── 第2段階（重い）: GDELT + AI概況。第1段階に追記する ──
+app.get("/api/news-enrich", async (req, res) => {
+  const ja    = (req.query.country || "").toString();
+  const en    = (req.query.country_en || ja).toString();
+  const topic = (req.query.topic || "環境問題").toString();
+  const lang  = (req.query.lang || "ja").toString();
+
+  let articles = [], overview = "";
+  try {
+    let gd = [];
+    try { const g = await fromGDELT(en, topic); gd = g.articles || []; } catch (_) {}
+    if (gd.length < 6){
+      try { const g2 = await fromGDELT(en, "environment OR climate OR pollution"); gd = gd.concat(g2.articles || []); } catch (_) {}
+    }
+    const seen = new Set();
+    for (const a of gd) if (a.url && a.title && !seen.has(a.url)){ seen.add(a.url); articles.push(a); }
+    const trusted = articles.filter(a => isTrusted(a.url));
+    const rest    = articles.filter(a => !isTrusted(a.url));
+    articles = trusted.concat(rest);
+    articles = relevanceFilter(articles, ja, en, topic);
+    articles = await translateTitles(articles, lang);
+    overview = await aiOverview(ja, topic, lang);   // 空でも可
+  } catch (e){ console.warn("news-enrichエラー:", e.message); }
+
+  res.json({ articles, overview });
 });
 
 /* ========================================================= */
@@ -687,23 +710,46 @@ app.get("/api/sdg-detail", async (req, res) => {
 /* ========================================================= */
 /* AI-Map：AIが生成する解説記事（Web記事ではない・参考情報）  */
 /* ========================================================= */
+// 「国 テーマ」でWeb検索し、ヒット件数（情報量の目安）を返す
+async function gdeltCount(en, topic){
+  const q = `${en} ${topicToEn(topic)}`;
+  const url = "https://api.gdeltproject.org/api/v2/doc/doc"
+            + `?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=40&timespan=3m&sort=datedesc`;
+  const r = await safeFetch(url, 12000);
+  if (!r.ok) return 0;
+  const d = await r.json().catch(() => ({}));
+  return (d.articles || []).length;
+}
+app.get("/api/search-count", async (req, res) => {
+  const en    = (req.query.country_en || "").toString();
+  const topic = (req.query.topic || "").toString();
+  const key = `cnt|${en}|${topic}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.t < TTL) return res.json({ ok:true, count:hit.data, cached:true });
+  let count = 0;
+  try { count = await gdeltCount(en, topic); } catch (_) {}
+  cache.set(key, { t: Date.now(), data: count });
+  res.json({ ok:true, count });
+});
+
 app.get("/api/ai-articles", async (req, res) => {
   const ja    = (req.query.country || "").toString();
   const en    = (req.query.country_en || ja).toString();
   const topic = (req.query.topic || "").toString();
   const lang  = (req.query.lang || "ja").toString();
+  const n     = Math.max(2, Math.min(6, parseInt(req.query.n, 10) || 4));   // 検索件数に応じた本数
   const info  = langInfo(lang);
   if (!ANTHROPIC) return res.json({ ok:false, reason:"no_ai", message:"AI-Mapの利用には ANTHROPIC_API_KEY が必要です。" });
   if (!topic)     return res.json({ ok:false, reason:"no_topic" });
 
-  const key = `ai|${lang}|${ja}|${topic}`;
+  const key = `ai|${lang}|${n}|${ja}|${topic}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
 
   const out = await claudeText(
     `あなたは教育向けの解説ライターです。事実にもとづく一般的な知識のみで、${info.name}の短い解説記事を書きます。具体的な統計数値・年月日・人物の発言・存在しない出典やURLは創作しないでください。断定を避け、わかりやすく中立に書きます。`,
-    `「${ja}」の「${topic}」について、読者の興味を引く${info.name}の解説記事を、書ける範囲で2〜6本作成してください。話題が乏しい場合は少なめでかまいません。各記事は必ず {"title":"見出し","body":"2〜3文の本文"} の形にし、出力は JSON オブジェクトのみ： {"articles":[ ... ]} 。前後の説明・コードブロック記号は書かないでください。`,
-    1600
+    `「${ja}」の「${topic}」について、読者の興味を引く${info.name}の解説記事を${n}本作成してください。各記事は必ず {"title":"見出し","body":"2〜3文の本文"} の形にし、出力は JSON オブジェクトのみ： {"articles":[ ... ]} 。前後の説明・コードブロック記号は書かないでください。`,
+    1800
   );
   let articles = [];
   try {
@@ -731,6 +777,13 @@ app.get("/api/ai-articles", async (req, res) => {
   if (articles.length) cache.set(key, { t: Date.now(), data: payload });
   res.json(payload);
 });
+
+// コールドスタート対策: 稼働中は自分自身を定期的に叩いて休止を防ぐ（Render等）
+if (process.env.RENDER_EXTERNAL_URL){
+  const selfUrl = process.env.RENDER_EXTERNAL_URL.replace(/\/$/, "") + "/api/health";
+  setInterval(() => { safeFetch(selfUrl, 8000).catch(() => {}); }, 10 * 60 * 1000);
+  console.log("キープアライブ: 10分ごとに", selfUrl);
+}
 
 app.listen(PORT, () => {
   console.log("========================================");
