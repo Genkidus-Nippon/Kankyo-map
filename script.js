@@ -20,7 +20,7 @@ const MODES = {
   aimap:   { title:"AI-Map", type:"aiinfo",
              hint:"テーマを選び、国をダブルクリックするとAIが解説記事を生成します（参考情報）。" },
   env:     { title:"環境世界地図", type:"envdata", endpoint:ENDPOINTS.news,
-             hint:"テーマ（温暖化など）で色分け。自由検索に語を入れて国クリックで記事も見られます。" },
+             hint:"テーマ（温暖化など）と年代を選ぶと、進行度が色で分かります。国クリックで詳細。" },
   crops:   { title:"作物世界地図", type:"crops", endpoint:ENDPOINTS.crops,
              hint:"作物を選んで表示。収量で色が変わり、国をダブルクリックで詳細が出ます。" },
   sdg:     { title:"SDGs世界地図", type:"sdg",
@@ -114,7 +114,7 @@ function setControls(type){
   themeSelect.hidden   = !(infoish || type==="crops" || type==="envdata");
   subSelect.hidden     = !infoish;                 // I-Map/AI-Mapの小テーマ
   applyBtn.hidden      = !(type==="crops" || type==="envdata" || infoish);
-  freeSearch.hidden    = !(infoish || type==="envdata");
+  freeSearch.hidden    = !infoish;                 // 自由検索は I-Map / AI-Map のみ
   decadeControl.hidden = (type!=="envdata");
   goalSelect.hidden     = (type!=="sdg");
   indicatorSelect.hidden= (type!=="sdg");
@@ -278,10 +278,7 @@ function onCountryDblClick(feature){
   const type = MODES[currentMode].type;
   if (type==="crops") openCropCard(feature);
   else if (type==="aiinfo") openAiCard(feature);
-  else if (type==="envdata"){
-    if((freeSearch.value||"").trim()) openInfoCard(feature);   // 自由検索中は記事
-    else openThemeCard(feature);                               // それ以外はデータ詳細
-  }
+  else if (type==="envdata") openThemeCard(feature);
   else if (type==="sdg") openSdgCard(feature);
   else if (type==="user") openUserCard(feature);
   else openInfoCard(feature);
@@ -625,7 +622,7 @@ decadeSlider.addEventListener("change", ()=>{
 
 function applyTheme(){
   const free=(freeSearch.value||"").trim();
-  if(free && (isImapLike() || currentMode==="env")){ runFreeSearch(); return; }
+  if(free && isImapLike()){ runFreeSearch(); return; }
   if(isImapLike()){
     const q=currentTopic();
     if(!q){ flashHint("分野と小テーマを選ぶか、自由検索を入力してください。"); return; }
