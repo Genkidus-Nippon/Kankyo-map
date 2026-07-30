@@ -316,3 +316,9 @@ body.menu-open .nav-menu{ transform:translateX(0); }
 /* Aboutの地図ボタンを対等に（横並びで折り返し） */
 .about-cta{ display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
 .about-cta .cta{ margin-top:0; }
+
+/* hidden属性を確実に効かせる（クラスのdisplay指定より優先） */
+[hidden]{ display:none !important; }
+/* パン操作のカーソル */
+.world-map{ cursor:grab; }
+.world-map:active{ cursor:grabbing; }
