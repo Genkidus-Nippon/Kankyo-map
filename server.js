@@ -391,16 +391,26 @@ async function claudeText(system, user, maxTokens = 800){
   return (d.content || []).map(b => b.text || "").join("").trim();
 }
 
-// ③ 英語などの見出しを日本語へ翻訳（日本語の見出しはスキップ＝高速化）
+// ③ 見出しの翻訳（利用者の言語へ）。日本語見出しはJA向けのときスキップ
 const hasJapanese = s => /[\u3040-\u30ff\u4e00-\u9faf]/.test(s || "");
 const DEEPL = process.env.DEEPL_KEY;
 
+// 利用者の言語 → DeepLターゲット / AI用の言語名
+const LANGS = {
+  ja:{deepl:"JA",name:"日本語"}, en:{deepl:"EN-US",name:"English"}, fr:{deepl:"FR",name:"français"},
+  de:{deepl:"DE",name:"Deutsch"}, es:{deepl:"ES",name:"español"}, it:{deepl:"IT",name:"italiano"},
+  pt:{deepl:"PT-PT",name:"português"}, nl:{deepl:"NL",name:"Nederlands"}, pl:{deepl:"PL",name:"polski"},
+  ru:{deepl:"RU",name:"русский"}, zh:{deepl:"ZH",name:"中文"}, ko:{deepl:"KO",name:"한국어"},
+  id:{deepl:"ID",name:"Bahasa Indonesia"}, tr:{deepl:"TR",name:"Türkçe"}, uk:{deepl:"UK",name:"українська"},
+};
+function langInfo(lang){ return LANGS[(lang||"ja").toString().slice(0,2).toLowerCase()] || LANGS.ja; }
+
 // DeepL 翻訳（設定時のみ）。無料キーは末尾 ":fx"
-async function deeplTranslate(texts){
+async function deeplTranslate(texts, target="JA"){
   if (!DEEPL || !texts.length) return null;
   const base = DEEPL.endsWith(":fx") ? "https://api-free.deepl.com" : "https://api.deepl.com";
   const params = new URLSearchParams();
-  params.set("target_lang", "JA");
+  params.set("target_lang", target);
   for (const t of texts) params.append("text", t);
   const r = await safeFetch(base + "/v2/translate", 12000, {
     method: "POST",
@@ -413,24 +423,24 @@ async function deeplTranslate(texts){
   return out.length === texts.length ? out : null;
 }
 
-async function translateTitles(articles){
+async function translateTitles(articles, lang){
+  const info = langInfo(lang);
+  const isJa = info.deepl === "JA";
   const targets = articles.slice(0, 12)
     .map((a, i) => ({ i, t: a.title }))
-    .filter(o => !hasJapanese(o.t));
+    .filter(o => isJa ? !hasJapanese(o.t) : true);   // JA向けは日本語をスキップ、他言語は全訳
   if (!targets.length) return articles;
 
-  // DeepL 優先（速くて安価）
-  const dl = await deeplTranslate(targets.map(o => o.t));
+  const dl = await deeplTranslate(targets.map(o => o.t), info.deepl);
   if (dl){
     const map = new Map(targets.map((o, k) => [o.i, dl[k]]));
     return articles.map((a, i) => map.has(i) ? { ...a, title: map.get(i) } : a);
   }
 
-  // DeepLが無ければ AI で翻訳
   if (!ANTHROPIC) return articles;
   const out = await claudeText(
-    "あなたは翻訳者です。ニュース見出しを自然な日本語に訳します。固有名詞は一般的な日本語表記にします。",
-    `次の各見出しを日本語にしてください。出力はJSON配列のみで、各要素は {\"i\":番号,\"ja\":\"日本語見出し\"} の形式。前後の説明は一切書かないでください。\n\n${JSON.stringify(targets, null, 0)}`,
+    `あなたは翻訳者です。ニュース見出しを自然な${info.name}に訳します。`,
+    `次の各見出しを${info.name}にしてください。出力はJSON配列のみ：{\"i\":番号,\"ja\":\"訳\"} 。説明は書かないでください。\n\n${JSON.stringify(targets, null, 0)}`,
     900
   );
   try {
@@ -452,11 +462,12 @@ function relevanceFilter(articles, ja, en, topic){
 }
 
 // ② 記事が少ないときのAI概況（出典URLは作らない・AI生成と明示）
-async function aiOverview(ja, topic){
+async function aiOverview(ja, topic, lang){
   if (!ANTHROPIC) return "";
+  const info = langInfo(lang);
   return await claudeText(
-    "あなたは環境問題の中立的な解説者です。事実に基づき、断定を避け、存在しない出典やURL・具体的な日付や統計の数字を創作しないでください。",
-    `${ja}における環境問題、特に「${topic}」に関する一般的な状況を、日本語で3〜4文にまとめてください。最新の個別ニュースの断定はせず、背景知識として概観を説明してください。`,
+    `あなたは中立的な解説者です。事実にもとづき、断定や統計数値の創作を避け、${info.name}で回答します。`,
+    `${ja}の「${topic}」に関する一般的な状況を、${info.name}で3〜4文にまとめてください。`,
     500
   );
 }
@@ -465,7 +476,8 @@ app.get("/api/news", async (req, res) => {
   const ja    = (req.query.country || "").toString();
   const en    = (req.query.country_en || ja).toString();
   const topic = (req.query.topic || "環境問題").toString();
-  const key = `news|${ja}|${en}|${topic}`;
+  const lang  = (req.query.lang || "ja").toString();
+  const key = `news|${lang}|${ja}|${en}|${topic}`;
 
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
@@ -483,8 +495,8 @@ app.get("/api/news", async (req, res) => {
     for (const w of wiki) if (!seen.has(w.url)) articles.push(w);
 
     articles = relevanceFilter(articles, ja, en, topic);   // 関連性の低い記事を除外
-    articles = await translateTitles(articles);            // 日本語見出しはスキップ
-    if (articles.length < 3) overview = await aiOverview(ja, topic);
+    articles = await translateTitles(articles, lang);      // 利用者の言語へ翻訳
+    if (articles.length < 3) overview = await aiOverview(ja, topic, lang);
     if (!articles.length && !overview) reason = "empty";
   } catch (e){ console.warn("news取得エラー:", e.message); reason = "error"; }
 
@@ -679,25 +691,41 @@ app.get("/api/ai-articles", async (req, res) => {
   const ja    = (req.query.country || "").toString();
   const en    = (req.query.country_en || ja).toString();
   const topic = (req.query.topic || "").toString();
+  const lang  = (req.query.lang || "ja").toString();
+  const info  = langInfo(lang);
   if (!ANTHROPIC) return res.json({ ok:false, reason:"no_ai", message:"AI-Mapの利用には ANTHROPIC_API_KEY が必要です。" });
   if (!topic)     return res.json({ ok:false, reason:"no_topic" });
 
-  const key = `ai|${ja}|${topic}`;
+  const key = `ai|${lang}|${ja}|${topic}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
 
   const out = await claudeText(
-    "あなたは教育向けの解説ライターです。事実にもとづく一般的な知識のみで、日本語の短い解説記事を書きます。具体的な統計数値・年月日・人物の発言・存在しない出典やURLは創作しないでください。断定を避け、わかりやすく中立に書きます。",
-    `「${ja}」の「${topic}」について、読者の興味を引く日本語の解説記事を、書ける範囲で2〜6本作成してください。話題が乏しい場合は少なめでかまいません。各記事は {\"title\":\"見出し\",\"body\":\"2〜3文の本文\"} とし、出力はJSONのみ：{\"articles\":[...]} 。前後の説明は書かないでください。`,
-    1400
+    `あなたは教育向けの解説ライターです。事実にもとづく一般的な知識のみで、${info.name}の短い解説記事を書きます。具体的な統計数値・年月日・人物の発言・存在しない出典やURLは創作しないでください。断定を避け、わかりやすく中立に書きます。`,
+    `「${ja}」の「${topic}」について、読者の興味を引く${info.name}の解説記事を、書ける範囲で2〜6本作成してください。話題が乏しい場合は少なめでかまいません。各記事は必ず {"title":"見出し","body":"2〜3文の本文"} の形にし、出力は JSON オブジェクトのみ： {"articles":[ ... ]} 。前後の説明・コードブロック記号は書かないでください。`,
+    1600
   );
   let articles = [];
   try {
-    const parsed = JSON.parse(out.replace(/```json|```/g, "").trim());
-    articles = Array.isArray(parsed.articles) ? parsed.articles
-             : (Array.isArray(parsed) ? parsed : []);
-    articles = articles.filter(a => a && a.title).slice(0, 6);
-  } catch (_) {}
+    let txt = (out || "").replace(/```json|```/g, "").trim();
+    const st = txt.search(/[\[{]/);
+    const en2 = Math.max(txt.lastIndexOf("]"), txt.lastIndexOf("}"));
+    if (st >= 0 && en2 > st) txt = txt.slice(st, en2 + 1);
+    const parsed = JSON.parse(txt);
+    articles = Array.isArray(parsed) ? parsed : (parsed.articles || []);
+  } catch (err) {
+    console.warn("AI-Map parse失敗:", err.message, "| raw:", (out || "").slice(0, 240));
+  }
+  articles = (articles || [])
+    .filter(a => a && (a.title || a.body))
+    .map(a => ({ title: (a.title || "記事").toString(), body: (a.body || "").toString() }))
+    .slice(0, 6);
+
+  // JSONにできなかったが本文はある場合は1本の記事として返す（空振り防止）
+  if (!articles.length && out && out.trim()){
+    articles = [{ title: `${ja}の${topic}`, body: out.replace(/```/g, "").trim().slice(0, 400) }];
+  }
+  if (!articles.length) console.warn(`AI-Map: 生成できず（${ja}/${topic}）ANTHROPIC=${!!ANTHROPIC}`);
 
   const payload = { ok:true, articles, count:articles.length };
   if (articles.length) cache.set(key, { t: Date.now(), data: payload });
