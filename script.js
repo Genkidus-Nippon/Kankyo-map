@@ -9,6 +9,9 @@ const ENDPOINTS = {
   aiArticles:"/api/ai-articles",
   contact:"/api/contact",
 };
+// 利用者の言語（ブラウザ設定）。記事・AIの翻訳先に使う
+const LOCALE = (navigator.language || "ja").toLowerCase();
+try { document.documentElement.lang = LOCALE.slice(0,2); } catch(_){}
 
 /* 最終構成: I-Map(記事統合) / 環境(データ) / 作物 / SDGs（＋ユーザー） */
 const MODES = {
@@ -179,7 +182,8 @@ addEventListener("resize", ()=>{ if(sakuraOn) sizeCanvas(); });
 /* ========================================================= */
 const svg=d3.select("#worldMap"), loading=document.getElementById("mapLoading");
 let gRoot,path,projection,geo,countrySel;
-let zoomBehavior=null, currentTransform=d3.zoomIdentity;
+let panX=0, panY=0;
+function applyPan(){ if(gRoot){ gRoot.attr("transform",`translate(${panX},${panY})`); repositionCards(); } }
 let cropData=null;     // 作物モードのデータ
 let themeData=null;    // 特化型モードのデータ
 let sdgData=null;      // SDGsモードのデータ
@@ -209,10 +213,9 @@ async function initMap(){
       .on("dblclick",(e,d)=>{ e.preventDefault(); onCountryDblClick(d); });
     svg.on("mouseleave",resetHover);
 
-    // ズーム/パン（モバイルで小さい国もタップしやすく）。ダブルクリックはカード用に温存
-    zoomBehavior = d3.zoom().scaleExtent([1, 12])
-      .on("zoom", (e)=>{ currentTransform=e.transform; gRoot.attr("transform", e.transform); repositionCards(); });
-    svg.call(zoomBehavior).on("dblclick.zoom", null);
+    // パンのみ（ズームなし）。二本指スクロール＝画面移動、ドラッグでも移動
+    svg.node().addEventListener("wheel", (e)=>{ e.preventDefault(); panX-=e.deltaX; panY-=e.deltaY; applyPan(); }, {passive:false});
+    svg.call(d3.drag().on("drag",(e)=>{ panX+=e.dx; panY+=e.dy; applyPan(); }));
 
     fitMap(); loading.hidden=true;
     addEventListener("resize", ()=>{ fitMap(); repositionCards(); });
@@ -229,6 +232,7 @@ function fitMap(){
   const cx=(b[0][0]+b[1][0])/2, cy=(b[0][1]+b[1][1])/2, [tx,ty]=projection.translate();
   projection.translate([tx+(w/2-cx),ty+(h/2-cy)]);
   path=d3.geoPath(projection); gRoot.selectAll("path.country").attr("d",path);
+  panX=0; panY=0; gRoot.attr("transform",null);
 }
 
 /* 収量→色（青=少 → 赤=多） */
@@ -345,7 +349,7 @@ function bindSrcLink(card){
 async function fetchInfo(en,ja,topic){
   const ep=MODES[currentMode].endpoint;
   try{
-    const qs=new URLSearchParams({country:ja,country_en:en,topic});
+    const qs=new URLSearchParams({country:ja,country_en:en,topic,lang:LOCALE});
     const r=await fetch(`${ep}?${qs.toString()}`);
     if(r.ok){
       const d=await r.json(); let note="";
@@ -399,7 +403,7 @@ async function openAiCard(feature){
 
   let d={};
   try{
-    const qs=new URLSearchParams({country:ja,country_en:en,topic});
+    const qs=new URLSearchParams({country:ja,country_en:en,topic,lang:LOCALE});
     const r=await fetch(`${ENDPOINTS.aiArticles}?${qs.toString()}`);
     if(r.ok) d=await r.json();
   }catch(_){}
@@ -516,9 +520,9 @@ async function loadTheme(metric, decade){
 /* 画面外・操作パネルに重ならない位置決め（ズーム変換も考慮） */
 function positionCard(card,feature){
   const b=path.bounds(feature);
-  // ズーム/パン変換を反映した画面座標に変換
-  const tl=currentTransform.apply(b[0]);
-  const br=currentTransform.apply(b[1]);
+  // パン量を反映した画面座標
+  const tl=[b[0][0]+panX, b[0][1]+panY];
+  const br=[b[1][0]+panX, b[1][1]+panY];
   const cardH=card.offsetHeight||260, cardW=card.offsetWidth||CARD_W;
   const TOP_SAFE=132;   // 上部の操作パネル（地図選択・年代など）を避ける
   let left=br[0]+GAP, top=tl[1];
