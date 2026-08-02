@@ -145,11 +145,33 @@ const EXTRA = {
   "Mongolia":    {poverty:5,undernourish:4,life:70,infant:13,literacy:99,gender:0.71,women_parl:17,water:83,electricity:98,renew:8,unemp:7,gni:3.8,rnd:0.1,gini:33,pm25:45,co2pc:14,co2total:0.1,marine:null,forest:8,homicide:5,cpi:33,internet:83,mobile:135},
 };
 
-function withExtra(ind){
+// 追加収録国 その2（全指標に反映）
+const EXTRA2 = {
+  "Belgium":     {poverty:1,undernourish:2.5,life:82,infant:3,literacy:99,gender:0.80,women_parl:43,water:100,electricity:100,renew:25,unemp:6,gni:52,rnd:3.4,gini:27,pm25:12,co2pc:8,co2total:0.2,marine:9,forest:23,homicide:1.7,cpi:73,internet:92,mobile:100},
+  "Ireland":     {poverty:1,undernourish:2.5,life:82,infant:3,literacy:99,gender:0.80,women_parl:23,water:100,electricity:100,renew:40,unemp:5,gni:80,rnd:1.2,gini:31,pm25:8,co2pc:7,co2total:0.1,marine:2,forest:11,homicide:0.9,cpi:77,internet:92,mobile:105},
+  "Israel":      {poverty:1,undernourish:2.5,life:83,infant:3,literacy:98,gender:0.73,women_parl:24,water:100,electricity:100,renew:10,unemp:4,gni:52,rnd:5.4,gini:39,pm25:20,co2pc:7,co2total:0.2,marine:22,forest:8,homicide:1.4,cpi:63,internet:90,mobile:140},
+  "Hungary":     {poverty:1,undernourish:2.5,life:76,infant:4,literacy:99,gender:0.69,women_parl:14,water:100,electricity:100,renew:14,unemp:4,gni:18,rnd:1.6,gini:30,pm25:16,co2pc:5,co2total:0.1,marine:0,forest:23,homicide:1,cpi:42,internet:89,mobile:110},
+  "Serbia":      {poverty:7,undernourish:2.5,life:75,infant:5,literacy:99,gender:0.73,women_parl:38,water:90,electricity:100,renew:26,unemp:9,gni:9,rnd:0.9,gini:33,pm25:26,co2pc:6,co2total:0.1,marine:null,forest:31,homicide:1.3,cpi:36,internet:81,mobile:120},
+  "Ecuador":     {poverty:3,undernourish:13,life:77,infant:12,literacy:94,gender:0.73,women_parl:39,water:80,electricity:97,renew:80,unemp:4,gni:6,rnd:0.4,gini:45,pm25:12,co2pc:2.3,co2total:0.1,marine:13,forest:50,homicide:8,cpi:34,internet:71,mobile:90},
+  "Bolivia":     {poverty:5,undernourish:13,life:72,infant:20,literacy:93,gender:0.73,women_parl:52,water:78,electricity:99,renew:34,unemp:4,gni:3.2,rnd:0.2,gini:41,pm25:23,co2pc:2,co2total:0.05,marine:null,forest:50,homicide:6,cpi:31,internet:66,mobile:100},
+  "Guatemala":   {poverty:9,undernourish:16,life:70,infant:22,literacy:83,gender:0.66,women_parl:19,water:83,electricity:97,renew:65,unemp:3,gni:5,rnd:0.03,gini:48,pm25:26,co2pc:1,co2total:0.03,marine:1,forest:33,homicide:17,cpi:24,internet:65,mobile:120},
+  "Dominican Republic":{poverty:1,undernourish:8,life:74,infant:26,literacy:95,gender:0.73,women_parl:28,water:88,electricity:99,renew:16,unemp:6,gni:8.5,rnd:0.03,gini:39,pm25:16,co2pc:2.5,co2total:0.06,marine:8,forest:44,homicide:9,cpi:32,internet:80,mobile:85},
+  "Cuba":        {poverty:1,undernourish:2.5,life:79,infant:4,literacy:100,gender:0.75,women_parl:53,water:96,electricity:100,renew:5,unemp:3,gni:9,rnd:0.4,gini:38,pm25:19,co2pc:2,co2total:0.06,marine:26,forest:31,homicide:5,cpi:45,internet:71,mobile:63},
+  "Jordan":      {poverty:1,undernourish:8,life:75,infant:14,literacy:98,gender:0.63,women_parl:12,water:92,electricity:100,renew:14,unemp:19,gni:4.4,rnd:0.7,gini:34,pm25:34,co2pc:2.3,co2total:0.06,marine:1,forest:1,homicide:2,cpi:47,internet:88,mobile:70},
+  "Lebanon":     {poverty:1,undernourish:11,life:75,infant:7,literacy:95,gender:0.64,women_parl:5,water:93,electricity:95,renew:9,unemp:11,gni:3.5,rnd:0.2,gini:32,pm25:30,co2pc:3.7,co2total:0.05,marine:1,forest:14,homicide:4,cpi:24,internet:78,mobile:60},
+  "Qatar":       {poverty:1,undernourish:2.5,life:80,infant:5,literacy:99,gender:0.63,women_parl:5,water:100,electricity:100,renew:0.5,unemp:0.2,gni:70,rnd:0.5,gini:41,pm25:44,co2pc:35,co2total:0.2,marine:2,forest:0.1,homicide:0.5,cpi:58,internet:100,mobile:130},
+  "Kuwait":      {poverty:1,undernourish:2.5,life:79,infant:7,literacy:96,gender:0.63,women_parl:2,water:100,electricity:100,renew:0.3,unemp:2,gni:36,rnd:0.1,gini:40,pm25:38,co2pc:25,co2total:0.2,marine:2,forest:0.4,homicide:1.5,cpi:42,internet:99,mobile:150},
+  "Nepal":       {poverty:8,undernourish:5,life:71,infant:24,literacy:71,gender:0.69,women_parl:34,water:71,electricity:90,renew:99,unemp:11,gni:1.2,rnd:0.3,gini:33,pm25:44,co2pc:0.5,co2total:0.02,marine:null,forest:42,homicide:2,cpi:35,internet:38,mobile:130},
+  "Papua New Guinea":{poverty:38,undernourish:25,life:66,infant:36,literacy:64,gender:0.72,women_parl:2,water:45,electricity:20,renew:30,unemp:3,gni:2.6,rnd:0.03,gini:42,pm25:9,co2pc:0.8,co2total:0.02,marine:1,forest:74,homicide:9,cpi:27,internet:23,mobile:50},
+  "Zimbabwe":    {poverty:39,undernourish:32,life:60,infant:38,literacy:89,gender:0.73,women_parl:31,water:64,electricity:53,renew:64,unemp:5,gni:1.5,rnd:0.03,gini:50,pm25:20,co2pc:0.5,co2total:0.02,marine:null,forest:45,homicide:7,cpi:23,internet:31,mobile:90},
+};
+function withAllExtra(ind){
   const data = { ...ind.data };
-  for (const [c, obj] of Object.entries(EXTRA)){
-    const v = obj[ind.key];
-    if (v != null) data[c] = v;
+  for (const src of [EXTRA, EXTRA2]){
+    for (const [c, obj] of Object.entries(src)){
+      const v = obj[ind.key];
+      if (v != null) data[c] = v;
+    }
   }
   return data;
 }
@@ -176,7 +198,7 @@ function indicator(goalId, key){
   return g.indicators.find(i => i.key === key) || g.indicators[0];
 }
 function buildScore(ind){
-  const data = withExtra(ind);
+  const data = withAllExtra(ind);
   const vals = Object.values(data);
   const min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
   const score = {};
