@@ -7,6 +7,38 @@
 
 const DECADES = [1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020];
 
+// 追加収録国（全指標に反映）。country → {指標キー: 2020年アンカー値}
+const ENV_EXTRA = {
+  "Poland":{warming:1.7,desert:5,forest:-5,water:45,air:20,co2:8,sea:16,biodiv:40},
+  "Netherlands":{warming:1.7,desert:0,forest:8,water:40,air:11,co2:8,sea:24,biodiv:42},
+  "Sweden":{warming:2.0,desert:0,forest:-3,water:20,air:6,co2:4,sea:16,biodiv:30},
+  "Norway":{warming:2.1,desert:0,forest:0,water:15,air:7,co2:7,sea:16,biodiv:28},
+  "Finland":{warming:2.1,desert:0,forest:-2,water:18,air:6,co2:8,sea:15,biodiv:30},
+  "Belgium":{warming:1.6,desert:0,forest:5,water:55,air:12,co2:8,sea:22,biodiv:42},
+  "Switzerland":{warming:1.8,desert:0,forest:-2,water:25,air:10,co2:4,biodiv:35},
+  "Austria":{warming:1.7,desert:0,forest:-3,water:30,air:12,co2:7,biodiv:38},
+  "Greece":{warming:1.6,desert:30,forest:12,water:55,air:15,co2:5,sea:18,biodiv:42},
+  "Portugal":{warming:1.6,desert:30,forest:25,water:50,air:8,co2:4,sea:17,biodiv:40},
+  "Czechia":{warming:1.7,desert:5,forest:5,water:40,air:15,co2:9,biodiv:38},
+  "Romania":{warming:1.7,desert:15,forest:10,water:40,air:16,co2:4,sea:12,biodiv:40},
+  "Ukraine":{warming:1.8,desert:15,forest:3,water:55,air:18,co2:4,sea:12,biodiv:42},
+  "Kazakhstan":{warming:1.9,desert:66,forest:5,water:55,air:24,co2:14,biodiv:40},
+  "Vietnam":{warming:1.0,desert:5,forest:-10,water:55,air:30,co2:3.5,sea:26,biodiv:62},
+  "Philippines":{warming:1.0,desert:5,forest:30,water:50,air:35,co2:1.3,sea:25,biodiv:75},
+  "Malaysia":{warming:0.9,desert:2,forest:24,water:40,air:20,co2:8,sea:22,biodiv:68},
+  "Bangladesh":{warming:1.1,desert:5,forest:15,water:60,air:65,co2:0.6,sea:28,biodiv:55},
+  "Colombia":{warming:1.0,desert:10,forest:12,water:50,air:17,co2:1.8,sea:18,biodiv:52},
+  "Chile":{warming:1.1,desert:40,forest:10,water:58,air:20,co2:4.7,sea:16,biodiv:45},
+  "Peru":{warming:1.0,desert:30,forest:9,water:45,air:25,co2:1.7,sea:16,biodiv:48},
+  "New Zealand":{warming:1.2,desert:5,forest:-5,water:40,air:6,co2:7,sea:19,biodiv:40},
+  "Ireland":{warming:1.5,desert:0,forest:-8,water:30,air:8,co2:7,sea:18,biodiv:42},
+  "Iraq":{warming:1.6,desert:75,forest:5,water:75,air:50,co2:4,sea:20,biodiv:55},
+  "United Arab Emirates":{warming:1.5,desert:95,forest:4,water:95,air:40,co2:20,sea:18,biodiv:50},
+  "Ghana":{warming:1.0,desert:20,forest:33,water:45,air:38,co2:0.6,sea:20,biodiv:60},
+  "Tanzania":{warming:1.1,desert:40,forest:18,water:55,air:30,co2:0.2,sea:21,biodiv:50},
+  "Angola":{warming:1.0,desert:30,forest:12,water:56,air:40,co2:0.8,sea:22,biodiv:55},
+};
+
 const METRICS = {
   warming: {
     ja:"温暖化（気温上昇）", unit:"℃",
@@ -149,6 +181,11 @@ function getTheme(metric, decade){
   const t = (year - 1950) / 70;
   const data = {};
   for (const [c, a] of Object.entries(m.anchor)) data[c] = m.model(a, t);
+  // 追加収録国（全指標共通）
+  for (const [c, obj] of Object.entries(ENV_EXTRA)){
+    const a = obj[metric];
+    if (a != null && data[c] == null) data[c] = m.model(a, t);
+  }
   const vals = Object.values(data);
   return {
     ok:true, metric, ja:m.ja, unit:m.unit, source:m.source, note:m.note,
