@@ -237,6 +237,23 @@ async function safeFetch(url, ms = 12000, opts = {}){
 // URLからドメイン名を取り出す（出典表示用）
 function domainOf(u){ try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } }
 
+// Google Custom Search（ウェブ全体を検索。歴史・文化も拾える）
+const GOOGLE_CSE_KEY = process.env.GOOGLE_CSE_KEY;
+const GOOGLE_CSE_ID  = process.env.GOOGLE_CSE_ID;
+const googleReady = () => !!(GOOGLE_CSE_KEY && GOOGLE_CSE_ID);
+async function fromGoogle(query, lang){
+  if (!googleReady()) return [];
+  const hl = (lang || "ja").slice(0, 2);
+  const url = `https://www.googleapis.com/customsearch/v1`
+            + `?key=${GOOGLE_CSE_KEY}&cx=${GOOGLE_CSE_ID}&num=10&hl=${hl}&q=${encodeURIComponent(query)}`;
+  const r = await safeFetch(url, 10000);
+  if (!r.ok){ console.warn("Google CSE失敗:", r.status, (await r.text()).slice(0,160)); return []; }
+  const d = await r.json().catch(() => ({}));
+  return (d.items || []).map(it => ({
+    title: it.title, url: it.link, source: domainOf(it.link), desc: it.snippet || ""
+  }));
+}
+
 // Currents API 検索（1回分）
 async function currentsSearch(keywords, language){
   const kw = encodeURIComponent(keywords.trim());
@@ -482,23 +499,34 @@ app.get("/api/news", async (req, res) => {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ...hit.data, cached:true });
 
-  // ── 第1段階（高速）: Currents + Wikipedia のみ。GDELT/AI概況は enrich に回す ──
+  // ── 第1段階（高速）──
+  // Google Custom Searchが使えるならウェブ全体を検索（歴史・文化も拾える）。
+  // 無ければニュースAPI（Currents）。いずれもWikipediaを添える。
   let articles = [], reason = "";
   try {
-    const [cur, wikiRaw] = await Promise.all([
-      fromCurrents(ja, en, topic).catch(() => []),
+    const gq = /^ja/i.test(lang) ? `${ja} ${topic}` : `${en} ${topicToEn(topic)}`;
+    const [g, cur, wikiRaw] = await Promise.all([
+      fromGoogle(gq, lang).catch(() => []),
+      googleReady() ? Promise.resolve([]) : fromCurrents(ja, en, topic).catch(() => []),
       fromWikipedia(ja, topic).catch(() => []),
     ]);
+
     const seen = new Set();
-    for (const a of cur) if (a.url && a.title && !seen.has(a.url)){ seen.add(a.url); articles.push(a); }
+    const push = list => { for (const a of list) if (a.url && a.title && !seen.has(a.url)){ seen.add(a.url); articles.push(a); } };
+    // 信頼できるドメインを優先（ブランド・信頼性で選別）
+    push((g || []).filter(a => isTrusted(a.url)));
+    push(cur.filter(a => isTrusted(a.url)));
+    push(g || []);
+    push(cur);
     const wiki = wikiRaw.filter(w => w.title.includes(ja) || w.title.includes(topic)).slice(0, 2);
-    for (const w of wiki) if (!seen.has(w.url)) articles.push(w);
+    push(wiki);
+
     articles = relevanceFilter(articles, ja, en, topic);
     articles = await translateTitles(articles, lang);
     if (!articles.length) reason = "empty_fast";
   } catch (e){ console.warn("news(fast)エラー:", e.message); reason = "error"; }
 
-  res.json({ articles, overview:"", reason, stage:1 });   // すぐ返す（キャッシュは enrich 後）
+  res.json({ articles, overview:"", reason, stage:1 });
 });
 
 // ── 第2段階（重い）: GDELT + AI概況。第1段階に追記する ──
@@ -722,12 +750,21 @@ async function gdeltCount(en, topic){
 }
 app.get("/api/search-count", async (req, res) => {
   const en    = (req.query.country_en || "").toString();
+  const ja    = (req.query.country || en).toString();
   const topic = (req.query.topic || "").toString();
+  const lang  = (req.query.lang || "ja").toString();
   const key = `cnt|${en}|${topic}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < TTL) return res.json({ ok:true, count:hit.data, cached:true });
   let count = 0;
-  try { count = await gdeltCount(en, topic); } catch (_) {}
+  try {
+    if (googleReady()){
+      const gq = /^ja/i.test(lang) ? `${ja} ${topic}` : `${en} ${topicToEn(topic)}`;
+      count = (await fromGoogle(gq, lang)).length;   // ヒット件数（0〜10）
+    } else {
+      count = await gdeltCount(en, topic);
+    }
+  } catch (_) {}
   cache.set(key, { t: Date.now(), data: count });
   res.json({ ok:true, count });
 });
@@ -771,8 +808,12 @@ app.get("/api/ai-articles", async (req, res) => {
   if (!articles.length && out && out.trim()){
     articles = [{ title: `${ja}の${topic}`, body: out.replace(/```/g, "").trim().slice(0, 400) }];
   }
-  if (!articles.length) console.warn(`AI-Map: 生成できず（${ja}/${topic}）ANTHROPIC=${!!ANTHROPIC}`);
+  if (!articles.length) console.warn(`AI-Map: 生成できず（${ja}/${topic}）ANTHROPIC=${!!ANTHROPIC} model=${AI_MODEL}`);
 
+  if (!articles.length){
+    return res.json({ ok:false, reason:"ai_failed",
+      message:"AI記事を生成できませんでした。サーバーの ANTHROPIC_API_KEY とモデル設定（ANTHROPIC_MODEL）をご確認ください。" });
+  }
   const payload = { ok:true, articles, count:articles.length };
   if (articles.length) cache.set(key, { t: Date.now(), data: payload });
   res.json(payload);
@@ -804,6 +845,7 @@ app.listen(PORT, () => {
   }
   console.log("AI補助（翻訳・概況）:", ANTHROPIC ? `有効（model=${AI_MODEL}）` : "無効（ANTHROPIC_API_KEY 未設定）");
   console.log("DeepL翻訳:", DEEPL ? "有効" : "無効（DEEPL_KEY 未設定）");
+  console.log("Google検索:", googleReady() ? "有効（I-Mapはウェブ全体を検索）" : "無効（GOOGLE_CSE_KEY / GOOGLE_CSE_ID 未設定 → ニュースAPIを使用）");
 });
 
 // 起動確認用
