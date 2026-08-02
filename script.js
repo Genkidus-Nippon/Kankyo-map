@@ -458,7 +458,7 @@ async function aiScan(topic){
     const batch=list.slice(i,i+4);
     await Promise.all(batch.map(async en=>{
       try{
-        const qs=new URLSearchParams({country_en:en,topic});
+        const qs=new URLSearchParams({country_en:en,country:jaName(en),topic,lang:LOCALE});
         const r=await fetch(`${ENDPOINTS.searchCount}?${qs.toString()}`);
         if(r.ok){ const d=await r.json(); aiCounts[en]=d.count||0; if(aiCounts[en]>aiMax) aiMax=aiCounts[en]; }
       }catch(_){}
@@ -498,8 +498,8 @@ async function openAiCard(feature){
     body+=`<ul class="news-list">`+d.articles.map(a=>
       `<li><div class="ai-article"><h3>${escapeHtml(a.title)}</h3><p>${escapeHtml(a.body||"")}</p></div></li>`
     ).join("")+`</ul>`;
-  }else if(d.reason==="no_ai"){
-    body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(d.message||"AI-Mapの利用にはAPIキーが必要です。")}</span></li></ul>`;
+  }else if(d.reason==="no_ai" || d.reason==="ai_failed"){
+    body+=`<ul class="news-list"><li><span class="news-dead">${escapeHtml(d.message||"AI記事を生成できませんでした。")}</span></li></ul>`;
   }else{
     body+=`<ul class="news-list"><li><span class="news-dead">この国×テーマではAI記事を生成できませんでした。別のテーマをお試しください。</span></li></ul>`;
   }
