@@ -733,11 +733,12 @@ function applyTheme(){
 }
 applyBtn.addEventListener("click", applyTheme);
 themeSelect.addEventListener("change", ()=>{
-  if(isImapLike()){ populateSubSelect(themeSelect.value); }   // 大分類→小テーマ
+  if(isImapLike()){ freeSearch.value=""; populateSubSelect(themeSelect.value); }   // 分野選択時は自由検索をクリア
   else applyTheme();
 });
 subSelect.addEventListener("change", ()=>{
   const v=subSelect.value; if(!v) return;
+  freeSearch.value="";                                   // プルダウン選択→自由検索をクリア（選択を有効化）
   playPulse(); showToast(`「${v}」で表示中`);
   if(currentMode==="aimap"){ aiScan(v); }
   else {
@@ -749,6 +750,7 @@ subSelect.addEventListener("change", ()=>{
 function runFreeSearch(){
   const q=(freeSearch.value||"").trim();
   if(!q) return;
+  subSelect.selectedIndex=0;                             // 自由検索実行→小テーマ選択をリセット（自由検索を有効化）
   playPulse(); showToast(`「${q}」で検索中`);
   if(currentMode==="aimap"){
     aiScan(q);
