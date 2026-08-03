@@ -254,6 +254,35 @@ async function fromGoogle(query, lang){
   }));
 }
 
+// Brave Search（ウェブ全体を検索。新規登録しやすく無料枠あり）
+const BRAVE_KEY = process.env.BRAVE_KEY;
+const braveReady = () => !!BRAVE_KEY;
+async function fromBrave(query, lang){
+  if (!braveReady()) return [];
+  const sl = (lang || "ja").slice(0, 2);
+  const url = `https://api.search.brave.com/res/v1/web/search`
+            + `?q=${encodeURIComponent(query)}&count=20&search_lang=${sl}`;
+  const r = await safeFetch(url, 10000, {
+    headers: { "X-Subscription-Token": BRAVE_KEY, "Accept": "application/json" },
+  });
+  if (!r.ok){ console.warn("Brave失敗:", r.status, (await r.text()).slice(0,160)); return []; }
+  const d = await r.json().catch(() => ({}));
+  const items = (d.web && d.web.results) || [];
+  return items.map(it => ({
+    title: it.title, url: it.url,
+    source: (it.meta_url && it.meta_url.hostname) || domainOf(it.url),
+    desc: it.description || ""
+  }));
+}
+
+// 統一ウェブ検索: Brave優先 → Google → 無ければ空（ニュースAPIにフォールバック）
+const webReady = () => braveReady() || googleReady();
+async function webSearch(query, lang){
+  if (braveReady())  return await fromBrave(query, lang);
+  if (googleReady()) return await fromGoogle(query, lang);
+  return [];
+}
+
 // Currents API 検索（1回分）
 async function currentsSearch(keywords, language){
   const kw = encodeURIComponent(keywords.trim());
@@ -506,8 +535,8 @@ app.get("/api/news", async (req, res) => {
   try {
     const gq = /^ja/i.test(lang) ? `${ja} ${topic}` : `${en} ${topicToEn(topic)}`;
     const [g, cur, wikiRaw] = await Promise.all([
-      fromGoogle(gq, lang).catch(() => []),
-      googleReady() ? Promise.resolve([]) : fromCurrents(ja, en, topic).catch(() => []),
+      webSearch(gq, lang).catch(() => []),
+      webReady() ? Promise.resolve([]) : fromCurrents(ja, en, topic).catch(() => []),
       fromWikipedia(ja, topic).catch(() => []),
     ]);
 
@@ -758,9 +787,9 @@ app.get("/api/search-count", async (req, res) => {
   if (hit && Date.now() - hit.t < TTL) return res.json({ ok:true, count:hit.data, cached:true });
   let count = 0;
   try {
-    if (googleReady()){
+    if (webReady()){
       const gq = /^ja/i.test(lang) ? `${ja} ${topic}` : `${en} ${topicToEn(topic)}`;
-      count = (await fromGoogle(gq, lang)).length;   // ヒット件数（0〜10）
+      count = (await webSearch(gq, lang)).length;   // ヒット件数（0〜20）
     } else {
       count = await gdeltCount(en, topic);
     }
@@ -845,7 +874,7 @@ app.listen(PORT, () => {
   }
   console.log("AI補助（翻訳・概況）:", ANTHROPIC ? `有効（model=${AI_MODEL}）` : "無効（ANTHROPIC_API_KEY 未設定）");
   console.log("DeepL翻訳:", DEEPL ? "有効" : "無効（DEEPL_KEY 未設定）");
-  console.log("Google検索:", googleReady() ? "有効（I-Mapはウェブ全体を検索）" : "無効（GOOGLE_CSE_KEY / GOOGLE_CSE_ID 未設定 → ニュースAPIを使用）");
+  console.log("ウェブ検索:", braveReady() ? "Brave（有効・ウェブ全体）" : (googleReady() ? "Google CSE（有効）" : "無効（BRAVE_KEY 等 未設定 → ニュースAPIを使用）"));
 });
 
 // 起動確認用
