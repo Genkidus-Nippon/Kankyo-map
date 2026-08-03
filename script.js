@@ -453,9 +453,9 @@ async function aiScan(topic){
   const hint=document.getElementById("mapHint");
   const list=AI_SCAN_COUNTRIES.slice();
   let done=0;
-  for(let i=0;i<list.length;i+=4){                       // 4件ずつ並列
+  for(let i=0;i<list.length;i+=2){                       // 2件ずつ（レート制限に配慮）
     if(currentMode!=="aimap" || aiScanTopic!==topic) return;   // モード/テーマが変わったら中断
-    const batch=list.slice(i,i+4);
+    const batch=list.slice(i,i+2);
     await Promise.all(batch.map(async en=>{
       try{
         const qs=new URLSearchParams({country_en:en,country:jaName(en),topic,lang:LOCALE});
@@ -466,6 +466,7 @@ async function aiScan(topic){
     }));
     recolorMap();
     hint.textContent=`「${topic}」の情報量をスキャン中… ${done}/${list.length}か国`;
+    await new Promise(r=>setTimeout(r, 400));            // 連続アクセスを少し間引く
   }
   hint.textContent=`「${topic}」でスキャン完了。国をダブルクリックするとAIが記事を生成します。`;
 }
