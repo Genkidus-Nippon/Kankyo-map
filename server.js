@@ -507,6 +507,25 @@ function relevanceFilter(articles, ja, en, topic){
   return rel.length >= 3 ? rel : articles;
 }
 
+// 「まとめ・一覧・ランキング」系の記事を判定（個別トピックを優先するため）
+function isRoundup(title){
+  const t = (title || "");
+  const tl = t.toLowerCase();
+  // 英語: list of / top 10 / 10 best / 7 things / ranking / roundup / guide など
+  if (/\b(list of|top\s*\d+|\d+\s*(best|things|ways|places|reasons|facts|examples|types)|best\s*\d+|ranking|round[\s-]?up|ultimate guide|complete guide|everything you need)\b/i.test(tl)) return true;
+  // 数字始まり（"10 Festivals ..." など）
+  if (/^\s*\d+\s+\S/.test(t)) return true;
+  // 日本語: 一覧 / まとめ / ランキング / ○選 / おすすめ / ベスト / トップ / 特集 / 完全ガイド / 総まとめ
+  if (/(一覧|まとめ|ランキング|\d+\s*選|おすすめ|ベスト\s*\d+|トップ\s*\d+|特集|完全ガイド|総まとめ|徹底比較)/.test(t)) return true;
+  return false;
+}
+// 個別トピックの記事を優先。十分あればまとめ記事は除外する
+function screenRoundups(list){
+  const single = list.filter(a => !isRoundup(a.title));
+  const round  = list.filter(a =>  isRoundup(a.title));
+  return single.length >= 4 ? single : single.concat(round);
+}
+
 // ② 記事が少ないときのAI概況（出典URLは作らない・AI生成と明示）
 async function aiOverview(ja, topic, lang){
   if (!ANTHROPIC) return "";
@@ -550,7 +569,7 @@ app.get("/api/news", async (req, res) => {
     const wiki = wikiRaw.filter(w => w.title.includes(ja) || w.title.includes(topic)).slice(0, 2);
     push(wiki);
 
-    articles = relevanceFilter(articles, ja, en, topic);
+    articles = screenRoundups(relevanceFilter(articles, ja, en, topic));
     articles = await translateTitles(articles, lang);
     if (!articles.length) reason = "empty_fast";
   } catch (e){ console.warn("news(fast)エラー:", e.message); reason = "error"; }
@@ -577,7 +596,7 @@ app.get("/api/news-enrich", async (req, res) => {
     const trusted = articles.filter(a => isTrusted(a.url));
     const rest    = articles.filter(a => !isTrusted(a.url));
     articles = trusted.concat(rest);
-    articles = relevanceFilter(articles, ja, en, topic);
+    articles = screenRoundups(relevanceFilter(articles, ja, en, topic));
     articles = await translateTitles(articles, lang);
     overview = await aiOverview(ja, topic, lang);   // 空でも可
   } catch (e){ console.warn("news-enrichエラー:", e.message); }
